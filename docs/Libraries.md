@@ -23,3 +23,14 @@ Python标准库，官方文档：https://docs.python.org/zh-cn/3/library/time.ht
 
 该模块提供了各种与时间相关的函数。  
 
+## os
+
+Python标准库，官方文档：https://docs.python.org/zh-cn/3/library/os.html 
+
+在这个课设中我主要用于获得程序运行所在的绝对目录，也就是```os.path.dirname```
+
+## locale  
+
+Python标准库，官方文档：https://docs.python.org/zh-cn/3/library/locale.html  
+
+
