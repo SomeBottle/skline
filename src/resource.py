@@ -32,10 +32,19 @@ class Res:
             get_dict = json.loads(f.read())
         return get_dict
 
-    def set_config(self,key,val):
+    def set_config(self, key, val):
         file_path = self.f_path+'/config.json'
-        pre_cfg=self.get_config() # 获得先前的配置文件
-        pre_cfg[key]=val
-        with open(file_path,'w+') as f:
-            f.write(json.dumps(pre_cfg)) # 写入修改后的配置
+        pre_cfg = self.get_config()  # 获得先前的配置文件
+        pre_cfg[key] = val
+        with open(file_path, 'w+') as f:
+            f.write(json.dumps(pre_cfg))  # 写入修改后的配置
         return True
+
+    @classmethod  # 作为一个类方法
+    def x_offset(cls, string, offset):
+        '''搭配addstr，处理字符串的偏移。如果只用addstr的x-offset的话就第一行有偏移，其他行都是一个样，这个方法将字符串除第一行之外所有行头部都加上offset空格'''
+        lines = string.splitlines(keepends=True)
+        first_line = lines.pop(0)  # 除了第一行
+        # Python竟然有这么方便的方法，可以直接按行分割，太棒了。keepends=True，每行保留换行符
+        # 除了第一行每一行都加上偏移
+        return first_line+''.join(map(lambda x: offset*' '+x, lines))

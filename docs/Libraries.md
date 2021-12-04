@@ -35,3 +35,8 @@ Python标准库，官方文档：https://docs.python.org/zh-cn/3/library/json.ht
 
 我决定用Json作为SKLINE的配置文件格式，由此需要使用json库
 
+# random
+
+Python标准库，官方文档：https://docs.python.org/zh-cn/3/library/random.html  
+
+游戏中的随机部分需要random库的帮助~

@@ -1,7 +1,7 @@
-import resource
 import time
 import curses
 from resource import Res
+from game import Game
 
 
 class BasicView:  # 抽象出一个显示界面的类
@@ -15,7 +15,7 @@ class BasicView:  # 抽象出一个显示界面的类
             2: 'Exit'
         }
         self.choice_func = {  # 上述选项对应的函数
-            0: lambda x: x,
+            0: Game().start,
             1: DifficultyView().show_panel,
             2: exit
         }
@@ -23,10 +23,12 @@ class BasicView:  # 抽象出一个显示界面的类
 
     def first_page(self):  # 开始界面
         self.tui.erase()  # 清除之前的内容
-        self.tui.addstr(1, 3, Res().art_texts('somebottle')[2])  # 打印出作者名
+        somebottle= Res().art_texts('somebottle')[2]
+        self.tui.addstr(1, 3,Res.x_offset(somebottle,3))  # 打印出作者名
         self.tui.refresh()  # 刷新窗口，输出addstr的内容
         time.sleep(1)  # 主界面
 
+    
     def option_maker(self, choice):  # 制作选项菜单
         option_menu = ''
         for k, v in self.choice_dict.items():
@@ -36,13 +38,13 @@ class BasicView:  # 抽象出一个显示界面的类
     def menu(self):  # 游戏菜单
         self.tui.erase()
         title_txt = Res().art_texts('skline')  # 获得艺术字元组
-        title_offset_h = title_txt[0]+2  # 标题窗口高度
-        title_offset_w = title_txt[1]+2  # 标题窗口宽度
+        title_offset_h = title_txt[0]+4  # 标题窗口高度
+        title_offset_w = title_txt[1]+4  # 标题窗口宽度
         # 创建一个窗口（其实是当边框使），这里+2是因为在addstr时文本有偏移
         # 高为 title_offset_h 宽为 title_offset_w，在命令行窗口的 2行1列
         title = curses.newwin(title_offset_h, title_offset_w, 2, 1)
         title.nodelay(True)  # 非阻塞!
-        title.addstr(1, 1, title_txt[2])  # 打印出游戏名
+        title.addstr(1, 3, Res.x_offset(title_txt[2],3))  # 打印出游戏名
         title.border()  # 标题旁边加个边框
         # 再创建一个窗口，我们作为菜单
         # 高为 3 宽为 title_offset_w，在命令行窗口的 title_offset_h+2行2列
@@ -87,13 +89,13 @@ class DifficultyView():  # 困难度调整的会话
         self.tui.erase()
         res_ins = Res()
         title_txt = res_ins.art_texts('difficulty')  # 获得艺术字元组
-        title_offset_h = title_txt[0]+2  # 标题窗口高度
-        title_offset_w = title_txt[1]+2  # 标题窗口宽度
+        title_offset_h = title_txt[0]+4  # 标题窗口高度
+        title_offset_w = title_txt[1]+4  # 标题窗口宽度
         # 创建一个窗口（其实是当边框使），这里+2是因为在addstr时文本有偏移
         # 高为 title_offset_h 宽为 title_offset_w，在命令行窗口的 2行1列
         title = curses.newwin(title_offset_h, title_offset_w, 2, 1)
         title.nodelay(True)  # 非阻塞!
-        title.addstr(1, 1, title_txt[2])  # 打印出游戏名
+        title.addstr(1, 3, Res.x_offset(title_txt[2],3))  # 打印出游戏名
         title.border()  # 标题旁边加个边框
         choice_session = curses.newwin(5, title_offset_w, title_offset_h+2, 2)
         choice_session.nodelay(False)  # 阻塞
@@ -118,5 +120,5 @@ class DifficultyView():  # 困难度调整的会话
         del title, choice_session  # 删除窗口
         self.tui.clear()  # 清除屏幕
         curses.endwin()  # 中止窗口，取消初始化
-        res_ins.set_config('difficulty',difficulty_set)
+        res_ins.set_config('difficulty', difficulty_set)
         BasicView().menu()  # 返回主菜单
