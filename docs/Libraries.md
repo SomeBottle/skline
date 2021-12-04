@@ -29,8 +29,9 @@ Python标准库，官方文档：https://docs.python.org/zh-cn/3/library/os.html
 
 在这个课设中我主要用于获得程序运行所在的绝对目录，也就是```os.path.dirname```
 
-## locale  
+## json
 
-Python标准库，官方文档：https://docs.python.org/zh-cn/3/library/locale.html  
+Python标准库，官方文档：https://docs.python.org/zh-cn/3/library/json.html 
 
+我决定用Json作为SKLINE的配置文件格式，由此需要使用json库
 
