@@ -11,6 +11,9 @@
 TUI游戏，一条像贪吃蛇的线。
 ```
 
+开始时间：2021.12.4  
+结束时间：
+
 ## 课设说明  
 
 1. [课程设计概述](https://github.com/SomeBottle/skline/blob/main/docs/AboutTheCourseProject.md)  

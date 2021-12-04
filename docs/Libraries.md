@@ -4,7 +4,10 @@
 
 ## Curses  
 
-Python标准库，官方文档：https://docs.python.org/zh-cn/3/howto/curses.html  
+Python标准库，官方文档：
+
+* https://docs.python.org/zh-cn/3/howto/curses.html  
+* https://docs.python.org/zh-cn/3/library/curses.html
 
 Curses最开始是由C进行编写，用作终端图形界面（TUI）绘制的库，后被Python（CPython）移植作为内置标准库。  
 
