@@ -40,3 +40,9 @@ Python标准库，官方文档：https://docs.python.org/zh-cn/3/library/json.ht
 Python标准库，官方文档：https://docs.python.org/zh-cn/3/library/random.html  
 
 游戏中的随机部分需要random库的帮助~
+
+# math  
+
+Python标准库，官方文档：https://docs.python.org/zh-cn/3/library/math.html  
+
+游戏中使用math模块对数值进行基本处理

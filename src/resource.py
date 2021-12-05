@@ -6,15 +6,33 @@ class Res:
     def __init__(self) -> None:
         self.f_path = path.dirname(__file__)  # 当前程序运行所在的绝对目录
         config_path = self.f_path+'/config.json'
-        default_config = {
+        default_config = {  # 默认配置文件
             'difficulty': 1,
-            'point_probabilities': {},
-            'map_sizes': {
-                "1": (50, 15), "2": (50, 15), "3": (40, 10), "4": (35, 10), "5": (30, 10)
+            'diff_cfg': {  # 不同困难度对应的配置
+                "1": {
+                    "map_size": (50, 15),
+                    "init_velo": 0.2
+                },
+                "2": {
+                    "map_size": (50, 15),
+                    "init_velo": 0.3
+                },
+                "3": {
+                    "map_size": (40, 10),
+                    "init_velo": 0.4
+                },
+                "4": {
+                    "map_size": (35, 10),
+                    "init_velo": 0.4
+                },
+                "5": {
+                    "map_size": (30, 10),
+                    "init_velo": 0.5
+                }
             },
-            "styles":{
-                "line_body":"□",
-                "line_color":"CYAN" # curses内置颜色
+            "styles": {
+                "line_body": "#",
+                "line_color": "CYAN"  # curses内置颜色
             }
         }
         if not path.exists(config_path):  # 如果没有就自动创建配置文件

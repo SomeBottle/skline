@@ -82,7 +82,8 @@ class DifficultyView():  # 困难度调整的会话
         tui = curses.initscr()  # 初始化curses，生成tui界面
         curses.noecho()  # 无回显模式
         self.tui = tui
-        self.max_difficulty = 5  # 最大困难度
+        diff_cfg = Res().get_config()['diff_cfg']
+        self.max_difficulty = len(diff_cfg.keys())  # 最大困难度，配置中有几个困难度最多就是多少
 
     def bar_maker(self, difficulty):  # 展现困难度的进度条
         bar_str = ('{: <'+str(self.max_difficulty)+'}').format('#'*difficulty)
