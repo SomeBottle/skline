@@ -6,7 +6,17 @@ class Res:
     def __init__(self) -> None:
         self.f_path = path.dirname(__file__)  # 当前程序运行所在的绝对目录
         config_path = self.f_path+'/config.json'
-        default_config = {'difficulty': 1, 'point_probabilities': {}}
+        default_config = {
+            'difficulty': 1,
+            'point_probabilities': {},
+            'map_sizes': {
+                "1": (50, 15), "2": (50, 15), "3": (40, 10), "4": (35, 10), "5": (30, 10)
+            },
+            "styles":{
+                "line_body":"□",
+                "line_color":"CYAN" # curses内置颜色
+            }
+        }
         if not path.exists(config_path):  # 如果没有就自动创建配置文件
             with open(config_path, 'w+') as f:
                 f.write(json.dumps(default_config))
@@ -48,3 +58,9 @@ class Res:
         # Python竟然有这么方便的方法，可以直接按行分割，太棒了。keepends=True，每行保留换行符
         # 除了第一行每一行都加上偏移
         return first_line+''.join(map(lambda x: offset*' '+x, lines))
+
+    @classmethod  # 作为一个类方法
+    def author(O0O00O0OOO0O0OO00):
+        OOO0O000000OOO0OO = 'U0tMSU5FIE1hZGUgYnkgU29tZUJvdHRsZSwgRG8gbm90IHVzZSBmb3I'
+        O0O00O0O0O00OOOOO = 'geW91ciBvd24gQ291cnNlIFByb2plY3Qu'
+        return OOO0O000000OOO0OO + O0O00O0O0O00OOOOO
