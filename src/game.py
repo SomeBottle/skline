@@ -120,20 +120,26 @@ class Line:  # 初始化运动线
         vx, vy = attrs['velo']  # 解构赋值x,y速度
         dx, dy = attrs['direction']  # 解构赋值x,y的方向
         recv = self.game_area.getch()  # 获取用户操作
-        if recv in (ord('a'), curses.KEY_LEFT, ord('d'), curses.KEY_RIGHT):
+        ctrls = {
+            'L': (ord('a'), curses.KEY_LEFT),
+            'R': (ord('d'), curses.KEY_RIGHT),
+            'U': (ord('w'), curses.KEY_UP),
+            'D': (ord('s'), curses.KEY_DOWN)
+        }
+        if recv in ctrls['L']+ctrls['R']:
             # 如果vx为0就调换一下两个速度，让速度沿x方向
             vx, vy = (vy, vx) if vx <= 0 else (vx, vy)
-        elif recv in (ord('w'), curses.KEY_UP, ord('s'), curses.KEY_DOWN):
+        elif recv in ctrls['U']+ctrls['D']:
             # 如果vy为0就调换一下两个速度，让速度沿y方向
             vy, vx = (vx, vy) if vy <= 0 else (vy, vx)
 
-        if recv in (ord('a'), curses.KEY_LEFT):  # 用户按下左键
+        if recv in ctrls['L']:  # 用户按下左键
             dx = -1  # 调转水平行进方向
-        elif recv in (ord('d'), curses.KEY_RIGHT):  # 用户按下右键
+        elif recv in ctrls['R']:  # 用户按下右键
             dx = 1  # 调转水平行进方向
-        elif recv in (ord('w'), curses.KEY_UP):  # 用户按下上键
+        elif recv in ctrls['U']:  # 用户按下上键
             dy = -1  # 调转竖直行进方向（向下为Y轴正方向）
-        elif recv in (ord('s'), curses.KEY_DOWN):  # 用户按下下键
+        elif recv in ctrls['D']:  # 用户按下下键
             dy = 1
         # 更新移动指示
         self.attrs['velo'] = (vx, vy)
