@@ -59,6 +59,12 @@ class Game:
     def map_size(self):  # 根据游戏难易度获得地图大小(长，高)，property修饰
         return self.game_cfg['map_size']
 
+    @property
+    def map_points(self):  # 根据地图大小生成所有的坐标
+        x, y = self.map_size
+        # 返回一个坐标集合
+        return {(xi, yi) for xi in range(1, x+1) for yi in range(1, y+1)}
+
     def draw_border(self):  # 绘制游戏区域边框
         map_w, map_h = map(lambda x: x+1, self.map_size)  # 获得地图大小
         pattern = self.styles['area_border']  # 读取边框样式
@@ -76,18 +82,21 @@ class Game:
         self.game_area = curses.newwin(map_h+3, map_w+3, 1, 1)
         self.game_area.keypad(True)  # 支持上下左右等特殊按键
         self.game_area.nodelay(True)  # 非阻塞，用户没操作游戏要持续进行
-        line_ins = Line(self)
+        line_ins = Line(self)  # 实例化线体
+        trg_ins = Trigger(line_ins)  # 实例化触发点
         while True:  # 开始游戏动画
             self.tui.erase()  # 擦除内容
             self.game_area.erase()  # 擦除游戏区域内容
             line_ins.draw_line()  # 绘制线体
             self.draw_border()  # 绘制游戏区域边界
             line_ins.draw_msg()  # 绘制信息
+            trg_ins.make()
             self.tui.refresh()
             self.game_area.refresh()
             line_ins.move()  # 移动蛇体
             line_ins.control()  # 接受控制蛇体
-            time.sleep(0.1)  # tick速度：0.1秒一计算，这个和图形运动速度有很大关联
+            # tick速度：0.1秒一计算，这个和图形运动速度有很大关联，0.1s一计算也就是刷新率10Hz
+            time.sleep(0.1)
 
 
 class Line:  # 初始化运动线
@@ -96,14 +105,17 @@ class Line:  # 初始化运动线
         map_size = game_ins.map_size  # 传递Game类的实例
         init_velo = config['init_velo']  # 配置的初始速度
         # 注意，防止生成在边缘，不然开局就G了！
-        rand_x = random.randint(4, map_size[0]-4)  # 生成线头第一次出现的x坐标
-        rand_y = random.randint(4, map_size[1]-4)  # 生成线头第一次出现的y坐标
+        map_w, map_h = map_size  # 解构赋值地图长宽
+        # 把生成区域x,y从地图区域往内各缩4格，防止生成在边缘
+        ava_points = [(xi, yi) for xi in range(4, map_w-3)
+                      for yi in range(4, map_h-3)]
         self.map_size = map_size
+        self.map_points = game_ins.map_points  # 传递地图坐标总集合
         self.game_area = game_ins.game_area  # 传递游戏区域窗口控制
         self.tui = game_ins.tui  # 传递总窗口绘制控制
         self.styles = game_ins.styles  # 传递游戏样式
         self.attrs = {  # 线体属性
-            'head_pos': (rand_x, rand_y),  # 头部的位置
+            'head_pos': random.choice(ava_points),  # 生成随机的头部坐标
             # 头部的运动速度(Vx,Vy)，单位：格数/tick，最开始要不沿x轴，要不沿y轴运动
             'velo': random.choice(((init_velo, 0), (0, init_velo))),
             # 运动方向(x,y)，-1代表负向。向右为X轴正方向，向下为Y轴正方向
@@ -122,7 +134,7 @@ class Line:  # 初始化运动线
     def draw_msg(self):  # 绘制线体相关信息，位于游戏区域下方
         map_h = self.map_size[1]  # 找出游戏区大小
         attrs = self.attrs
-        self.tui.addstr(map_h+4, 2, str(attrs['head_pos']))
+        self.tui.addstr(map_h+5, 1, str(attrs['head_pos']))
 
     def move(self):  # 计算角色移动
         max_x, max_y = self.map_size  # 解构赋值最大的x,y坐标值，添加偏移量1
@@ -166,3 +178,34 @@ class Line:  # 初始化运动线
         # 更新移动指示
         self.attrs['velo'] = (vx, vy)
         self.attrs['direction'] = (dx, dy)
+
+
+class Trigger:  # 触发点类
+    def __init__(self, line_ins) -> None:
+        self.game_area = line_ins.game_area  # 传递游戏区绘制
+        self.map_size = line_ins.map_size  # 传递游戏区大小
+        self.map_points = line_ins.map_points  # 传递地图坐标集合
+        self.tui = line_ins.tui  # 传递窗口绘制
+        self.line_attrs = line_ins.attrs  # 传递线体属性，因为attrs是字典，所以传递的是引用哦(⊙o⊙)
+        self.points = {}  # 用一个字典来储存触发点
+
+    def check(self):  # 检查食物碰撞
+        if len(self.points) == 0:  # 没有任何触发点
+            pass
+
+    def make(self):  # 做饭...啊不，是随机放置触发点的方法
+        attrs = self.line_attrs  # 获得线体属性
+        exist_points = []+attrs['body_pos']  # 脱离原来的引用
+        exist_points.append(attrs['head_pos'])  # exist_points储存的是已经使用的坐标点
+        # 将所有的坐标点和已经使用的坐标点作差集，就是还可以选用的坐标点
+        ava_points = tuple(self.map_points - set(exist_points))
+        # 生成触发点新出现的坐标
+        new_point = {
+            "type": "normal",
+            "pos": random.choice(ava_points)
+        }
+
+    def draw_msg(self):  # 输出触发点相关信息
+        map_h = self.map_size[1]  # 找出游戏区大小
+        attrs = self.line_attrs
+        self.tui.addstr(map_h+4, 1, str(attrs['head_pos']))
