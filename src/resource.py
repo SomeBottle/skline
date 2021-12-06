@@ -32,7 +32,9 @@ class Res:
             },
             "styles": {
                 "line_body": "#",
-                "line_color": "CYAN"  # curses内置颜色
+                "line_color": "CYAN",  # curses内置颜色
+                'area_border':'□',
+                "border_color":"WHITE"
             }
         }
         if not path.exists(config_path):  # 如果没有就自动创建配置文件

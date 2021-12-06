@@ -29,9 +29,11 @@ class Game:
         styles = config['styles']  # 获得样式设定
         self.styles = styles
         line_color = styles['line_color']
+        border_color = styles['border_color']
         # 一号颜色对，用于角色身体
-        curses.init_pair(
-            1, curses_colors[line_color], curses.COLOR_BLACK)
+        curses.init_pair(1, curses_colors[line_color], curses.COLOR_BLACK)
+        # 二号颜色对，用于边框颜色
+        curses.init_pair(2, curses_colors[border_color], curses.COLOR_BLACK)
 
     def flash_fx(self, content):
         for i in range(5):
@@ -57,20 +59,30 @@ class Game:
     def map_size(self):  # 根据游戏难易度获得地图大小(长，高)，property修饰
         return self.game_cfg['map_size']
 
+    def draw_border(self):  # 绘制游戏区域边框
+        map_w, map_h = map(lambda x: x+1, self.map_size)  # 获得地图大小
+        pattern = self.styles['area_border']  # 读取边框样式
+        self.game_area.addstr(0, 0, pattern*map_w, curses.color_pair(2))
+        self.game_area.addstr(map_h, 0, pattern*map_w, curses.color_pair(2))
+        for h in range(map_h+1):  # 让竖直方向的边框长一点
+            self.game_area.addstr(h, 0, pattern, curses.color_pair(2))
+            self.game_area.addstr(h, map_w, pattern, curses.color_pair(2))
+
     def start(self):  # 开始游戏！
         self.count_down()  # 先调用倒计时
         map_size = self.map_size  # 获得地图大小
         map_w, map_h = map_size  # 解构赋值
         # 根据地图大小创建游戏区域，要比地图大小稍微大一点
-        self.game_area = curses.newwin(map_h+2, map_w+2, 1, 1)
+        self.game_area = curses.newwin(map_h+3, map_w+3, 1, 1)
         self.game_area.keypad(True)  # 支持上下左右等特殊按键
         self.game_area.nodelay(True)  # 非阻塞，用户没操作游戏要持续进行
         line_ins = Line(self)
         while True:  # 开始游戏动画
             self.tui.erase()  # 擦除内容
             self.game_area.erase()  # 擦除游戏区域内容
-            line_ins.draw()  # 绘制蛇体
-            self.game_area.border()  # 游戏区域边界
+            line_ins.draw_line()  # 绘制线体
+            self.draw_border()  # 绘制游戏区域边界
+            line_ins.draw_msg()  # 绘制信息
             self.tui.refresh()
             self.game_area.refresh()
             line_ins.move()  # 移动蛇体
@@ -88,6 +100,7 @@ class Line:  # 初始化运动线
         rand_y = random.randint(4, map_size[1]-4)  # 生成线头第一次出现的y坐标
         self.map_size = map_size
         self.game_area = game_ins.game_area  # 传递游戏区域窗口控制
+        self.tui = game_ins.tui  # 传递总窗口绘制控制
         self.styles = game_ins.styles  # 传递游戏样式
         self.attrs = {  # 线体属性
             'head_pos': (rand_x, rand_y),  # 头部的位置
@@ -98,7 +111,7 @@ class Line:  # 初始化运动线
             'body_pos': []  # 身体各节的位置
         }
 
-    def draw(self):  # 绘制角色
+    def draw_line(self):  # 绘制角色
         styles = self.styles
         head_pos = self.attrs['head_pos']
         head_x, head_y = map(math.floor, head_pos)  # 解构赋值
@@ -106,13 +119,22 @@ class Line:  # 初始化运动线
         # 使用1号颜色对进行绘制
         self.game_area.addstr(head_y, head_x, line_body, curses.color_pair(1))
 
+    def draw_msg(self):  # 绘制线体相关信息，位于游戏区域下方
+        map_h = self.map_size[1]  # 找出游戏区大小
+        attrs = self.attrs
+        self.tui.addstr(map_h+4, 2, str(attrs['head_pos']))
+
     def move(self):  # 计算角色移动
+        max_x, max_y = self.map_size  # 解构赋值最大的x,y坐标值，添加偏移量1
         attrs = self.attrs  # 获得角色（线体）属性
         x, y = attrs['head_pos']  # 解构赋值头部x,y坐标
         vx, vy = attrs['velo']  # 解构赋值x,y速度
         dx, dy = attrs['direction']  # 解构赋值x,y的方向
-        x += vx*dx
-        y += vy*dy
+        # 让线头能穿越屏幕，因为窗口绘制偏差，x和y的初始值从1开始，与之相对max_x,max_y在上面也添加了偏移量1
+        x = x + (vx*dx) if x >= 1 and x <= max_x + \
+            1 else (max_x if dx < 0 else 1)
+        y = y + (vy*dy) if y >= 1 and y <= max_y + \
+            1 else (max_y if dy < 0 else 1)
         self.attrs['head_pos'] = (x, y)  # 更新头部坐标
 
     def control(self):
