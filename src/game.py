@@ -65,14 +65,21 @@ class Game:
         # 返回一个坐标集合
         return {(xi, yi) for xi in range(1, x+1) for yi in range(1, y+1)}
 
-    def draw_border(self):  # 绘制游戏区域边框
+    def border_points(self): # 创建边界点坐标
         map_w, map_h = map(lambda x: x+1, self.map_size)  # 获得地图大小
-        pattern = self.styles['area_border']  # 读取边框样式
-        self.game_area.addstr(0, 0, pattern*map_w, curses.color_pair(2))
-        self.game_area.addstr(map_h, 0, pattern*map_w, curses.color_pair(2))
+        border_points = set()  # 储存边框的点坐标
+        # border_points.update({(0, 0), (map_h, 0)})
+        for w in range(map_w+1): 
+            border_points.update({(0, w), (map_h, w)})
         for h in range(map_h+1):  # 让竖直方向的边框长一点
-            self.game_area.addstr(h, 0, pattern, curses.color_pair(2))
-            self.game_area.addstr(h, map_w, pattern, curses.color_pair(2))
+            border_points.update({(h, 0), (h, map_w)})
+        self.border_points=list(border_points)
+
+    def draw_border(self):  # 根据边界点坐标绘制游戏区域边框
+        pattern = self.styles['area_border']  # 读取边框样式
+        for point in self.border_points:
+            y,x=point
+            self.game_area.addstr(y, x, pattern, curses.color_pair(2))
 
     def start(self):  # 开始游戏！
         self.count_down()  # 先调用倒计时
@@ -82,6 +89,7 @@ class Game:
         self.game_area = curses.newwin(map_h+3, map_w+3, 1, 1)
         self.game_area.keypad(True)  # 支持上下左右等特殊按键
         self.game_area.nodelay(True)  # 非阻塞，用户没操作游戏要持续进行
+        self.border_points() # 创建边界点坐标
         line_ins = Line(self)  # 实例化线体
         trg_ins = Trigger(line_ins)  # 实例化触发点
         while True:  # 开始游戏动画
@@ -90,7 +98,8 @@ class Game:
             line_ins.draw_line()  # 绘制线体
             self.draw_border()  # 绘制游戏区域边界
             line_ins.draw_msg()  # 绘制信息
-            trg_ins.make()
+            trg_ins.check()
+            trg_ins.draw()
             self.tui.refresh()
             self.game_area.refresh()
             line_ins.move()  # 移动蛇体
@@ -114,6 +123,7 @@ class Line:  # 初始化运动线
         self.game_area = game_ins.game_area  # 传递游戏区域窗口控制
         self.tui = game_ins.tui  # 传递总窗口绘制控制
         self.styles = game_ins.styles  # 传递游戏样式
+        self.border_points=game_ins.border_points
         self.attrs = {  # 线体属性
             'head_pos': random.choice(ava_points),  # 生成随机的头部坐标
             # 头部的运动速度(Vx,Vy)，单位：格数/tick，最开始要不沿x轴，要不沿y轴运动
@@ -143,11 +153,11 @@ class Line:  # 初始化运动线
         vx, vy = attrs['velo']  # 解构赋值x,y速度
         dx, dy = attrs['direction']  # 解构赋值x,y的方向
         # 让线头能穿越屏幕，因为窗口绘制偏差，x和y的初始值从1开始，与之相对max_x,max_y在上面也添加了偏移量1
-        x = x + (vx*dx) if x >= 1 and x <= max_x + \
+        x = x + (vx*dx) if x >= 1 and x < max_x + \
             1 else (max_x if dx < 0 else 1)
-        y = y + (vy*dy) if y >= 1 and y <= max_y + \
+        y = y + (vy*dy) if y >= 1 and y < max_y + \
             1 else (max_y if dy < 0 else 1)
-        self.attrs['head_pos'] = (x, y)  # 更新头部坐标
+        attrs['head_pos'] = (x, y)  # 更新头部坐标
 
     def control(self):
         attrs = self.attrs  # 获得角色（线体）属性
@@ -179,24 +189,45 @@ class Line:  # 初始化运动线
         self.attrs['velo'] = (vx, vy)
         self.attrs['direction'] = (dx, dy)
 
+    def hit(self, p_x, p_y):  # 撞击判断(x,y)
+        attrs = self.attrs
+        h_x, h_y = attrs['head_pos']
+        return 0 <= h_x-p_x <= 1 and 0 <= h_y-p_y <= 1
+
 
 class Trigger:  # 触发点类
     def __init__(self, line_ins) -> None:
         self.game_area = line_ins.game_area  # 传递游戏区绘制
         self.map_size = line_ins.map_size  # 传递游戏区大小
         self.map_points = line_ins.map_points  # 传递地图坐标集合
+        self.border_points=line_ins.border_points # 传递边框坐标
         self.tui = line_ins.tui  # 传递窗口绘制
+        self.hit = line_ins.hit  # 传递碰撞检测方法
         self.line_attrs = line_ins.attrs  # 传递线体属性，因为attrs是字典，所以传递的是引用哦(⊙o⊙)
         self.points = {}  # 用一个字典来储存触发点
 
     def check(self):  # 检查食物碰撞
         if len(self.points) == 0:  # 没有任何触发点
-            pass
+            for i in range(20): self.make()  # 生成触发点
+        else:  # 有触发点就检测碰撞
+            attrs = self.line_attrs  # 获得线体属性
+            for ind, tg in self.points.items():  # 遍历触发点列表
+                t_x, t_y = tg['pos']  # 获得触发点坐标
+                # 两坐标相减，如果绝对值<1(格)，就说明在同一块区域，碰撞上了
+                # 判断水平方向碰撞
+                if self.hit(t_x, t_y):
+                    map_h = self.map_size[1]
+                    self.tui.addstr(map_h+4, 1, 'HIT!')
 
     def make(self):  # 做饭...啊不，是随机放置触发点的方法
         attrs = self.line_attrs  # 获得线体属性
+        sub = len(self.points)  # 获得点坐标储存下标
         exist_points = []+attrs['body_pos']  # 脱离原来的引用
-        exist_points.append(attrs['head_pos'])  # exist_points储存的是已经使用的坐标点
+        exist_points.append(attrs['head_pos'])
+        exist_triggers = [i['pos']
+                          for i in self.points.values()]  # 获得所有触发点占用的坐标点
+        exist_points += exist_triggers  # exist_points储存的是已经使用的坐标点
+        exist_points += self.border_points # 还要算入边框的点
         # 将所有的坐标点和已经使用的坐标点作差集，就是还可以选用的坐标点
         ava_points = tuple(self.map_points - set(exist_points))
         # 生成触发点新出现的坐标
@@ -204,8 +235,12 @@ class Trigger:  # 触发点类
             "type": "normal",
             "pos": random.choice(ava_points)
         }
+        self.points[sub] = new_point  # 储存创建的新触发点
 
-    def draw_msg(self):  # 输出触发点相关信息
+    def draw(self):  # 输出触发点和相关信息
         map_h = self.map_size[1]  # 找出游戏区大小
         attrs = self.line_attrs
-        self.tui.addstr(map_h+4, 1, str(attrs['head_pos']))
+        # self.tui.addstr(map_h+4, 1, str(attrs['head_pos']))
+        for tg in self.points.values():
+            x, y = tg['pos']
+            self.game_area.addstr(y, x, '#')

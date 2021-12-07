@@ -11,7 +11,7 @@ class Res:
             'diff_cfg': {  # 不同困难度对应的配置
                 "1": {
                     "map_size": (50, 15),
-                    "init_velo": 0.2
+                    "init_velo": 0.2  # 值得注意的是，速度最大值不能超过1格/tick，不然会绘制计算错误
                 },
                 "2": {
                     "map_size": (50, 15),
