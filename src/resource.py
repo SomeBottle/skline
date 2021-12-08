@@ -1,4 +1,5 @@
 from os import path
+from math import floor
 import json
 
 
@@ -32,9 +33,10 @@ class Res:
             },
             "styles": {
                 "line_body": "#",
-                "line_color": "CYAN",  # curses内置颜色
+                "line_color": (11, 170, 239),  # r,g,b
                 'area_border': '#',
-                "border_color": "WHITE"
+                "border_color": (161, 161, 161),
+                'trigger': "@"
             }
         }
         if not path.exists(config_path):  # 如果没有就自动创建配置文件
@@ -70,8 +72,8 @@ class Res:
             f.write(json.dumps(pre_cfg))  # 写入修改后的配置
         return True
 
-    @classmethod  # 作为一个类方法
-    def x_offset(cls, string, offset):
+    @staticmethod  # 作为一个静态方法
+    def x_offset(string, offset):
         '''搭配addstr，处理字符串的偏移。如果只用addstr的x-offset的话就第一行有偏移，其他行都是一个样，这个方法将字符串除第一行之外所有行头部都加上offset空格'''
         lines = string.splitlines(keepends=True)
         first_line = lines.pop(0)  # 除了第一行
@@ -79,8 +81,15 @@ class Res:
         # 除了第一行每一行都加上偏移
         return first_line+''.join(map(lambda x: offset*' '+x, lines))
 
-    @classmethod  # 作为一个类方法
-    def author(O0O00O0OOO0O0OO00):
+    # translateRGB，因为curses颜色RGB各分量范围是从0-1000的，需要翻译一下
+    # https://stackoverflow.com/questions/28401332/ncurses-why-is-the-rgb-color-value-range-from-0-1000
+    @staticmethod
+    def rgb(color):
+        ratio = 255/1000
+        return map(lambda x: floor(x/ratio), color)
+
+    @staticmethod
+    def author():
         OOO0O000000OOO0OO = 'U0tMSU5FIE1hZGUgYnkgU29tZUJvdHRsZSwgRG8gbm90IHVzZSBmb3I'
         O0O00O0O0O00OOOOO = 'geW91ciBvd24gQ291cnNlIFByb2plY3Qu'
         return OOO0O000000OOO0OO + O0O00O0O0O00OOOOO
