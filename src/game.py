@@ -6,10 +6,14 @@ from resource import Res
 
 
 class Game:
+    __score = 0
+
     def __init__(self) -> None:
         tui = curses.initscr()  # 初始化curses，生成tui界面
         curses.noecho()  # 无回显模式
         curses.start_color()  # 初始化颜色
+        tui.nodelay(True)  # getch不阻塞
+        tui.keypad(True)  # 支持特殊按键
         self.tui = tui
         res_ins = Res()
         config = res_ins.get_config()  # 获得游戏配置文件
@@ -25,6 +29,10 @@ class Game:
         # 二号颜色对，用于边框颜色
         curses.init_color(102, *Res.rgb(border_color))
         curses.init_pair(2, 102, curses.COLOR_BLACK)
+
+    @classmethod
+    def add_score(cls, num=1):
+        cls.__score += num
 
     def flash_fx(self, content):
         for i in range(5):
@@ -60,15 +68,15 @@ class Game:
         map_w, map_h = map(lambda x: x+1, self.map_size)  # 获得地图大小
         border_points = set()  # 储存边框的点坐标
         for w in range(map_w+1):
-            border_points.update({(0, w), (map_h, w)})
+            border_points.update({(w, 0), (w, map_h)})
         for h in range(map_h+1):  # 让竖直方向的边框长一点
-            border_points.update({(h, 0), (h, map_w)})
+            border_points.update({(0, h), (map_w, h)})
         self.border_points = list(border_points)
 
     def draw_border(self):  # 根据边界点坐标绘制游戏区域边框
         pattern = self.styles['area_border']  # 读取边框样式
         for point in self.border_points:
-            y, x = point
+            x, y = point
             self.game_area.addstr(y, x, pattern, curses.color_pair(2))
 
     def start(self):  # 开始游戏！
@@ -114,7 +122,6 @@ class Line:  # 初始化运动线
         self.styles = game_ins.styles  # 传递游戏样式
         self.border_points = game_ins.border_points
         init_velo = self.game_cfg['init_velo']  # 配置的初始速度
-        self.score = 0  # 计分板
         self.attrs = {  # 线体属性
             'head_pos': random.choice(ava_points),  # 生成随机的头部坐标
             # 头部的运动速度(Vx,Vy)，单位：格数/tick，最开始要不沿x轴，要不沿y轴运动
@@ -203,41 +210,47 @@ class Trigger:  # 触发点类
         self.tui = line_ins.tui  # 传递窗口绘制
         self.hit = line_ins.hit  # 传递碰撞检测方法
         self.line_attrs = line_ins.attrs  # 传递线体属性，因为attrs是字典，所以传递的是引用哦(⊙o⊙)
-        self.points = {}  # 用一个字典来储存触发点
+        self.triggers = {}  # 用一个字典来储存触发点
 
     def check(self):  # 检查食物碰撞
-        if len(self.points) == 0:  # 没有任何触发点
+        if len(self.triggers) == 0:  # 没有任何触发点
             self.make()  # 生成触发点
         else:  # 有触发点就检测碰撞
-            attrs = self.line_attrs  # 获得线体属性
-            for ind, tg in self.points.items():  # 遍历触发点列表
+            # 如果不这样做，在循环过程中对字典进行del操作时会有异常抛出
+            trg_items = tuple(self.triggers.items())
+            for ind, tg in trg_items:  # 遍历触发点列表
                 t_x, t_y = tg['pos']  # 获得触发点坐标
                 # 两坐标相减，如果绝对值<1(格)，就说明在同一块区域，碰撞上了
                 # 判断水平方向碰撞
                 if self.hit(t_x, t_y):
                     map_h = self.map_size[1]
-                    self.tui.addstr(map_h+4, 1, 'HIT!')
+                    self.tui.addstr(map_h+4, 1, 'HIT!'+str(ind))
+                    Game.add_score() # 加分
+                    del self.triggers[ind]
+                    self.make()
 
     def make(self):  # 做饭...啊不，是随机放置触发点的方法
         attrs = self.line_attrs  # 获得线体属性
-        sub = len(self.points)  # 获得点坐标储存下标
+        sub = len(self.triggers)  # 获得点坐标储存下标
         exist_points = []+attrs['body_pos']  # 脱离原来的引用
         exist_points.append(attrs['head_pos'])
         exist_triggers = [i['pos']
-                          for i in self.points.values()]  # 获得所有触发点占用的坐标点
+                          for i in self.triggers.values()]  # 获得所有触发点占用的坐标点
         exist_points += exist_triggers  # exist_points储存的是已经使用的坐标点
         exist_points += self.border_points  # 还要算入边框的点
         # 将所有的坐标点和已经使用的坐标点作差集，就是还可以选用的坐标点
         ava_points = tuple(self.map_points - set(exist_points))
+        trg_config = self.game_cfg['triggers']  # 获得触发点生成比率
+        chosen_type = Res.ratio_rand(trg_config)  # 使用ratiorand方法来随机生成的类型
         # 生成触发点新出现的坐标
         new_point = {
-            "type": "normal",
+            "type": chosen_type,
             "pos": random.choice(ava_points)
         }
-        self.points[sub] = new_point  # 储存创建的新触发点
+        self.triggers[sub] = new_point  # 储存创建的新触发点
 
     def draw(self):  # 输出触发点和相关信息
-        for tg in self.points.values():
+        for tg in self.triggers.values():
             trg_type = tg['type']  # 该触发点的类型
             trg_style = self.styles['triggers'][trg_type]  # 获得样式配置
             # 201号颜色用于触发点

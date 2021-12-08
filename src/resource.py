@@ -1,5 +1,6 @@
 from os import path
 from math import floor
+import random
 import json
 
 
@@ -180,6 +181,21 @@ class Res:
     def rgb(color):
         ratio = 255/1000
         return map(lambda x: floor(x/ratio), color)
+
+    # 根据比例来随机选择（传入字典，返回随机的字典键）
+    @staticmethod
+    def ratio_rand(dic):
+        pointer=1 # 指针从1开始
+        luck=random.randint(1,1000) # 从1到1000中选
+        choice=False
+        for k,v in dic.items():
+            cover=v*1000 # 找出该比率在1000中占的份额
+            # 划分区域，像抽奖转盘一样
+            if luck >= pointer and luck <= (pointer+cover-1):
+                choice=k
+                break
+            pointer+=cover
+        return choice
 
     @staticmethod
     def author():
