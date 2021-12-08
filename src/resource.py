@@ -12,23 +12,78 @@ class Res:
             'diff_cfg': {  # 不同困难度对应的配置
                 "1": {
                     "map_size": (50, 15),
-                    "init_velo": 0.2  # 值得注意的是，速度最大值不能超过1格/tick，不然会绘制计算错误
+                    "init_velo": 0.2,  # 值得注意的是，速度最大值不能超过1格/tick，不然会绘制计算错误
+                    "triggers": {  # 触发点的生成概率，支持小数点后三位
+                        "normal": 0.5,
+                        "bonus": 0.05,
+                        "accelerate": 0.1,
+                        "decelerate": 0.02,
+                        "myopia": 0.01,
+                        "bomb": 0.02,
+                        "invincibility": 0.05,
+                        "stones": 0.1,
+                        "teleport": 0.14
+                    }
                 },
                 "2": {
                     "map_size": (50, 15),
-                    "init_velo": 0.3
+                    "init_velo": 0.3,
+                    "triggers": {
+                        "normal": 0.4,
+                        "bonus": 0.05,
+                        "accelerate": 0.1,
+                        "decelerate": 0.02,
+                        "myopia": 0.01,
+                        "bomb": 0.02,
+                        "invincibility": 0.05,
+                        "stones": 0.2,
+                        "teleport": 0.14
+                    }
                 },
                 "3": {
                     "map_size": (40, 10),
-                    "init_velo": 0.4
+                    "init_velo": 0.4,
+                    "triggers": {
+                        "normal": 0.3,
+                        "bonus": 0.05,
+                        "accelerate": 0.2,
+                        "decelerate": 0.02,
+                        "myopia": 0.05,
+                        "bomb": 0.03,
+                        "invincibility": 0.05,
+                        "stones": 0.2,
+                        "teleport": 0.1
+                    }
                 },
                 "4": {
                     "map_size": (35, 10),
-                    "init_velo": 0.4
+                    "init_velo": 0.4,
+                    "triggers": {
+                        "normal": 0.25,
+                        "bonus": 0.05,
+                        "accelerate": 0.2,
+                        "decelerate": 0.02,
+                        "myopia": 0.1,
+                        "bomb": 0.03,
+                        "invincibility": 0.05,
+                        "stones": 0.2,
+                        "teleport": 0.1
+                    }
                 },
                 "5": {
                     "map_size": (30, 10),
-                    "init_velo": 0.5
+                    "init_velo": 0.5,
+                    "triggers": {
+                        "normal": 0.15,
+                        "bonus": 0.03,
+                        "accelerate": 0.22,
+                        "decelerate": 0.02,
+                        "myopia": 0.13,
+                        "bomb": 0.05,
+                        "invincibility": 0.03,
+                        "stones": 0.21,
+                        "teleport": 0.06
+                    }
                 }
             },
             "styles": {
@@ -36,12 +91,50 @@ class Res:
                 "line_color": (11, 170, 239),  # r,g,b
                 'area_border': '#',
                 "border_color": (161, 161, 161),
-                'trigger': "@"
+                "triggers": {  # 触发点配置
+                    "normal": {  # 涨分并增长线体
+                        "pattern": "@",
+                        "color": (255, 149, 0)
+                    },
+                    "bonus": {  # 只涨分的触发点
+                        "pattern": "@",
+                        "color": (255, 149, 0)
+                    },
+                    "accelerate": {  # 加速的触发点
+                        "pattern": "@",
+                        "color": (255, 149, 0)
+                    },
+                    "decelerate": {  # 减速的触发点
+                        "pattern": "@",
+                        "color": (255, 149, 0)
+                    },
+                    "myopia": {  # 近视触发点（视野缩小）
+                        "pattern": "@",
+                        "color": (255, 149, 0)
+                    },
+                    "bomb": {  # 炸弹点
+                        "pattern": "@",
+                        "color": (255, 149, 0)
+                    },
+                    "invincibility": {  # 无敌点
+                        "pattern": "@",
+                        "color": (255, 149, 0)
+                    },
+                    "stones": {  # 流石点
+                        "pattern": "@",
+                        "color": (255, 149, 0)
+                    },
+                    "teleport": {  # 传送点
+                        "pattern": "@",
+                        "color": (255, 149, 0)
+                    }
+
+                }
             }
         }
         if not path.exists(config_path):  # 如果没有就自动创建配置文件
             with open(config_path, 'w+') as f:
-                f.write(json.dumps(default_config))
+                f.write(json.dumps(default_config, indent=4))
 
     def art_texts(self, k):  # 获取艺术字，返回值(高度，长度，艺术字文本)，艺术字都放在了./texts目录下
         file_path = self.f_path+'/texts/'+k+'.txt'
@@ -69,7 +162,7 @@ class Res:
         pre_cfg = self.get_config()  # 获得先前的配置文件
         pre_cfg[key] = val
         with open(file_path, 'w+') as f:
-            f.write(json.dumps(pre_cfg))  # 写入修改后的配置
+            f.write(json.dumps(pre_cfg, indent=4))  # 写入修改后的配置
         return True
 
     @staticmethod  # 作为一个静态方法

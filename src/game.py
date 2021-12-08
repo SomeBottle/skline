@@ -100,20 +100,20 @@ class Game:
 
 class Line:  # 初始化运动线
     def __init__(self, game_ins) -> None:
-        config = game_ins.game_cfg  # 传递对应困难度的配置
         map_size = game_ins.map_size  # 传递Game类的实例
-        init_velo = config['init_velo']  # 配置的初始速度
         # 注意，防止生成在边缘，不然开局就G了！
         map_w, map_h = map_size  # 解构赋值地图长宽
         # 把生成区域x,y从地图区域往内各缩4格，防止生成在边缘
         ava_points = [(xi, yi) for xi in range(4, map_w-3)
                       for yi in range(4, map_h-3)]
         self.map_size = map_size
+        self.game_cfg = game_ins.game_cfg  # 传递对应困难度的配置
         self.map_points = game_ins.map_points  # 传递地图坐标总集合
         self.game_area = game_ins.game_area  # 传递游戏区域窗口控制
         self.tui = game_ins.tui  # 传递总窗口绘制控制
         self.styles = game_ins.styles  # 传递游戏样式
         self.border_points = game_ins.border_points
+        init_velo = self.game_cfg['init_velo']  # 配置的初始速度
         self.score = 0  # 计分板
         self.attrs = {  # 线体属性
             'head_pos': random.choice(ava_points),  # 生成随机的头部坐标
@@ -195,6 +195,7 @@ class Line:  # 初始化运动线
 class Trigger:  # 触发点类
     def __init__(self, line_ins) -> None:
         self.game_area = line_ins.game_area  # 传递游戏区绘制
+        self.game_cfg = line_ins.game_cfg  # 传递当前困难度对应的游戏配置
         self.map_size = line_ins.map_size  # 传递游戏区大小
         self.map_points = line_ins.map_points  # 传递地图坐标集合
         self.border_points = line_ins.border_points  # 传递边框坐标
@@ -236,7 +237,12 @@ class Trigger:  # 触发点类
         self.points[sub] = new_point  # 储存创建的新触发点
 
     def draw(self):  # 输出触发点和相关信息
-        pattern = self.styles['trigger']
         for tg in self.points.values():
+            trg_type = tg['type']  # 该触发点的类型
+            trg_style = self.styles['triggers'][trg_type]  # 获得样式配置
+            # 201号颜色用于触发点
+            curses.init_color(201, *Res.rgb(trg_style['color']))
+            curses.init_pair(10, 201, curses.COLOR_BLACK)  # 10号颜色对用于触发点
             x, y = tg['pos']
-            self.game_area.addstr(y, x, pattern)
+            self.game_area.addstr(
+                y, x, trg_style['pattern'], curses.color_pair(10))
