@@ -6,23 +6,14 @@ from resource import Res
 
 
 class Game:
-    __score = 0
-
     def __init__(self) -> None:
-        tui = curses.initscr()  # 初始化curses，生成tui界面
+        self.cls_init()  # 重初始化类属性
         curses.noecho()  # 无回显模式
         curses.start_color()  # 初始化颜色
-        tui.nodelay(True)  # getch不阻塞
-        tui.keypad(True)  # 支持特殊按键
-        self.tui = tui
-        res_ins = Res()
-        config = res_ins.get_config()  # 获得游戏配置文件
-        difficulty = str(config['difficulty'])  # json中数字键名都会转换为字符串
-        self.game_cfg = config['diff_cfg'][difficulty]  # 读取对应困难度的游戏配置
-        styles = config['styles']  # 获得样式设定
-        self.styles = styles
-        line_color = styles['line_color']
-        border_color = styles['border_color']
+        self.tui.nodelay(True)  # getch不阻塞
+        self.tui.keypad(True)  # 支持特殊按键
+        line_color = self.styles['line_color']
+        border_color = self.styles['border_color']
         # 一号颜色对，用于角色身体
         curses.init_color(101, *Res.rgb(line_color))
         curses.init_pair(1, 101, curses.COLOR_BLACK)
@@ -30,9 +21,47 @@ class Game:
         curses.init_color(102, *Res.rgb(border_color))
         curses.init_pair(2, 102, curses.COLOR_BLACK)
 
+    # 初始化类属性，这样写是为了每次实例化Game()时都对应更新类属性
+    # 为什么要全写成类属性呢，这是为了开放公共属性供Line,Trigger类实例使用，便于管理
     @classmethod
-    def add_score(cls, num=1):
+    def cls_init(cls):
+        all_cfg = Res().get_config()  # 获得游戏配置文件
+        difficulty = str(all_cfg['difficulty'])  # json中数字键名都会转换为字符串
+        game_cfg = all_cfg['diff_cfg'][difficulty]  # 读取对应困难度的游戏配置
+        map_size = game_cfg['map_size']
+        x, y = map_size
+        # 根据地图大小生成所有的坐标
+        cls.map_points = {(xi, yi) for xi in range(1, x+1)
+                          for yi in range(1, y+1)}
+        cls.styles = all_cfg['styles']  # 获得样式设定
+        cls.all_cfg = all_cfg
+        cls.game_cfg = game_cfg
+        cls.map_size = map_size
+        cls.__score = 0
+        cls.tui = curses.initscr()  # 初始化curses，生成tui界面
+
+    @classmethod
+    def add_score(cls, num=1):  # 加分
         cls.__score += num
+
+    @classmethod
+    def create_border(cls):  # 创建边界点坐标
+        map_w, map_h = map(lambda x: x+1, cls.map_size)  # 获得地图大小
+        border_points = set()  # 储存边框的点坐标
+        for w in range(map_w+1):
+            border_points.update({(w, 0), (w, map_h)})
+        for h in range(map_h+1):  # 让竖直方向的边框长一点
+            border_points.update({(0, h), (map_w, h)})
+        cls.border_points = list(border_points)
+
+    @classmethod
+    def create_area(cls):
+        map_w, map_h = map(lambda x: x+3, cls.map_size)  # 获得地图大小
+        # 根据地图大小创建游戏区域，要比地图大小稍微大一点
+        game_area = curses.newwin(map_h, map_w, 1, 1)
+        game_area.keypad(True)  # 支持上下左右等特殊按键
+        game_area.nodelay(True)  # 非阻塞，用户没操作游戏要持续进行
+        cls.game_area = game_area
 
     def flash_fx(self, content):
         for i in range(5):
@@ -54,25 +83,6 @@ class Game:
             self.tui.refresh()  # 刷新窗口，输出addstr的内容
             time.sleep(0.2)  # 主界面
 
-    @property
-    def map_size(self):  # 根据游戏难易度获得地图大小(长，高)，property修饰
-        return self.game_cfg['map_size']
-
-    @property
-    def map_points(self):  # 根据地图大小生成所有的坐标
-        x, y = self.map_size
-        # 返回一个坐标集合
-        return {(xi, yi) for xi in range(1, x+1) for yi in range(1, y+1)}
-
-    def border_points(self):  # 创建边界点坐标
-        map_w, map_h = map(lambda x: x+1, self.map_size)  # 获得地图大小
-        border_points = set()  # 储存边框的点坐标
-        for w in range(map_w+1):
-            border_points.update({(w, 0), (w, map_h)})
-        for h in range(map_h+1):  # 让竖直方向的边框长一点
-            border_points.update({(0, h), (map_w, h)})
-        self.border_points = list(border_points)
-
     def draw_border(self):  # 根据边界点坐标绘制游戏区域边框
         pattern = self.styles['area_border']  # 读取边框样式
         for point in self.border_points:
@@ -81,15 +91,10 @@ class Game:
 
     def start(self):  # 开始游戏！
         self.count_down()  # 先调用倒计时
-        map_size = self.map_size  # 获得地图大小
-        map_w, map_h = map_size  # 解构赋值
-        # 根据地图大小创建游戏区域，要比地图大小稍微大一点
-        self.game_area = curses.newwin(map_h+3, map_w+3, 1, 1)
-        self.game_area.keypad(True)  # 支持上下左右等特殊按键
-        self.game_area.nodelay(True)  # 非阻塞，用户没操作游戏要持续进行
-        self.border_points()  # 创建边界点坐标
-        line_ins = Line(self)  # 实例化线体
-        trg_ins = Trigger(line_ins)  # 实例化触发点
+        self.create_area()  # 创建游戏绘制区域
+        self.create_border()  # 创建边界点坐标
+        line_ins = Line()  # 实例化线体
+        trg_ins = Trigger(line_ins)  # 实例化触发点，并和线体实例关联
         while True:  # 开始游戏动画
             self.tui.erase()  # 擦除内容
             self.game_area.erase()  # 擦除游戏区域内容
@@ -107,21 +112,14 @@ class Game:
 
 
 class Line:  # 初始化运动线
-    def __init__(self, game_ins) -> None:
-        map_size = game_ins.map_size  # 传递Game类的实例
+
+    def __init__(self) -> None:
+        self.__map_w, self.__map_h = Game.map_size  # 解构赋值地图长宽
         # 注意，防止生成在边缘，不然开局就G了！
-        map_w, map_h = map_size  # 解构赋值地图长宽
         # 把生成区域x,y从地图区域往内各缩4格，防止生成在边缘
-        ava_points = [(xi, yi) for xi in range(4, map_w-3)
-                      for yi in range(4, map_h-3)]
-        self.map_size = map_size
-        self.game_cfg = game_ins.game_cfg  # 传递对应困难度的配置
-        self.map_points = game_ins.map_points  # 传递地图坐标总集合
-        self.game_area = game_ins.game_area  # 传递游戏区域窗口控制
-        self.tui = game_ins.tui  # 传递总窗口绘制控制
-        self.styles = game_ins.styles  # 传递游戏样式
-        self.border_points = game_ins.border_points
-        init_velo = self.game_cfg['init_velo']  # 配置的初始速度
+        ava_points = [(xi, yi) for xi in range(4, self.__map_w-3)
+                      for yi in range(4, self.__map_h-3)]
+        init_velo = Game.game_cfg['init_velo']  # 配置的初始速度
         self.attrs = {  # 线体属性
             'head_pos': random.choice(ava_points),  # 生成随机的头部坐标
             # 头部的运动速度(Vx,Vy)，单位：格数/tick，最开始要不沿x轴，要不沿y轴运动
@@ -130,22 +128,21 @@ class Line:  # 初始化运动线
             'direction': (random.choice((1, -1)), random.choice((1, -1))),
             'body_pos': []  # 身体各节的位置
         }
+        self.styles = Game.styles
 
     def draw_line(self):  # 绘制角色
-        styles = self.styles
         head_pos = self.attrs['head_pos']
         head_x, head_y = map(math.floor, head_pos)  # 解构赋值
-        line_body = styles['line_body']
+        line_body = self.styles['line_body']
         # 使用1号颜色对进行绘制
-        self.game_area.addstr(head_y, head_x, line_body, curses.color_pair(1))
+        Game.game_area.addstr(head_y, head_x, line_body, curses.color_pair(1))
 
     def draw_msg(self):  # 绘制线体相关信息，位于游戏区域下方
-        map_h = self.map_size[1]  # 找出游戏区大小
         attrs = self.attrs
-        self.tui.addstr(map_h+5, 1, str(attrs['head_pos']))
+        Game.tui.addstr(self.__map_h+5, 1, str(attrs['head_pos']))
 
     def move(self):  # 计算角色移动
-        max_x, max_y = self.map_size  # 解构赋值最大的x,y坐标值，添加偏移量1
+        max_x, max_y = self.__map_w, self.__map_h  # 解构赋值最大的x,y坐标值，添加偏移量1
         attrs = self.attrs  # 获得角色（线体）属性
         x, y = attrs['head_pos']  # 解构赋值头部x,y坐标
         vx, vy = attrs['velo']  # 解构赋值x,y速度
@@ -161,7 +158,7 @@ class Line:  # 初始化运动线
         attrs = self.attrs  # 获得角色（线体）属性
         vx, vy = attrs['velo']  # 解构赋值x,y速度
         dx, dy = attrs['direction']  # 解构赋值x,y的方向
-        recv = self.game_area.getch()  # 获取用户操作
+        recv = Game.game_area.getch()  # 获取用户操作
         ctrls = {
             'L': (ord('a'), curses.KEY_LEFT),
             'R': (ord('d'), curses.KEY_RIGHT),
@@ -201,13 +198,11 @@ class Line:  # 初始化运动线
 
 class Trigger:  # 触发点类
     def __init__(self, line_ins) -> None:
-        self.game_area = line_ins.game_area  # 传递游戏区绘制
-        self.game_cfg = line_ins.game_cfg  # 传递当前困难度对应的游戏配置
-        self.map_size = line_ins.map_size  # 传递游戏区大小
-        self.map_points = line_ins.map_points  # 传递地图坐标集合
-        self.border_points = line_ins.border_points  # 传递边框坐标
-        self.styles = line_ins.styles  # 传递样式表
-        self.tui = line_ins.tui  # 传递窗口绘制
+        self.game_cfg = Game.game_cfg  # 传递当前困难度对应的游戏配置
+        self.map_size = Game.map_size  # 传递游戏区大小
+        self.map_points = Game.map_points  # 传递地图坐标集合
+        self.border_points = Game.border_points  # 传递边框坐标
+        self.styles = Game.styles  # 传递样式表
         self.hit = line_ins.hit  # 传递碰撞检测方法
         self.line_attrs = line_ins.attrs  # 传递线体属性，因为attrs是字典，所以传递的是引用哦(⊙o⊙)
         self.triggers = {}  # 用一个字典来储存触发点
@@ -224,8 +219,8 @@ class Trigger:  # 触发点类
                 # 判断水平方向碰撞
                 if self.hit(t_x, t_y):
                     map_h = self.map_size[1]
-                    self.tui.addstr(map_h+4, 1, 'HIT!'+str(ind))
-                    Game.add_score() # 加分
+                    Game.tui.addstr(map_h+4, 1, 'HIT!'+str(ind))
+                    Game.add_score()  # 加分
                     del self.triggers[ind]
                     self.make()
 
@@ -257,5 +252,5 @@ class Trigger:  # 触发点类
             curses.init_color(201, *Res.rgb(trg_style['color']))
             curses.init_pair(10, 201, curses.COLOR_BLACK)  # 10号颜色对用于触发点
             x, y = tg['pos']
-            self.game_area.addstr(
+            Game.game_area.addstr(
                 y, x, trg_style['pattern'], curses.color_pair(10))
