@@ -1,7 +1,7 @@
 import curses
 import time
 import random
-import math
+from math import floor
 from resource import Res
 
 
@@ -12,14 +12,22 @@ class Game:
         curses.start_color()  # 初始化颜色
         self.tui.nodelay(True)  # getch不阻塞
         self.tui.keypad(True)  # 支持特殊按键
-        line_color = self.styles['line_color']
-        border_color = self.styles['border_color']
-        # 一号颜色对，用于角色身体
-        curses.init_color(101, *Res.rgb(line_color))
-        curses.init_pair(1, 101, curses.COLOR_BLACK)
+        styles = self.styles
+        line_head_color = styles['line_head_color']
+        line_body_color = styles['line_body_color']
+        border_color = styles['border_color']
+        # 一号颜色对，用于线头
+        self.set_color(1, line_head_color)
         # 二号颜色对，用于边框颜色
-        curses.init_color(102, *Res.rgb(border_color))
-        curses.init_pair(2, 102, curses.COLOR_BLACK)
+        self.set_color(2, border_color)
+        # 三号颜色对，用于线尾
+        self.set_color(3, line_body_color)
+
+    @staticmethod
+    def set_color(num, rgb_tuple):
+        color_num = num+100
+        curses.init_color(color_num, *Res.rgb(rgb_tuple))
+        curses.init_pair(num, color_num, curses.COLOR_BLACK)
 
     # 初始化类属性，这样写是为了每次实例化Game()时都对应更新类属性
     # 为什么要全写成类属性呢，这是为了开放公共属性供Line,Trigger类实例使用，便于管理
@@ -128,23 +136,27 @@ class Line:  # 初始化运动线
             'direction': (random.choice((1, -1)), random.choice((1, -1))),
             'body_pos': []  # 身体各节的位置
         }
-        self.styles = Game.styles
 
     def draw_line(self):  # 绘制角色
         head_pos = self.attrs['head_pos']
-        head_x, head_y = map(math.floor, head_pos)  # 解构赋值
-        line_body = self.styles['line_body']
-        # 使用1号颜色对进行绘制
+        body_pos = self.attrs['body_pos']
+        head_x, head_y = map(floor, head_pos)  # 解构赋值
+        line_body = Game.styles['line']
+        for t in body_pos:  # 绘制尾部
+            Game.game_area.addstr(t[1], t[0], line_body, curses.color_pair(3))
+        # 使用1号颜色对进行头部绘制
         Game.game_area.addstr(head_y, head_x, line_body, curses.color_pair(1))
 
     def draw_msg(self):  # 绘制线体相关信息，位于游戏区域下方
         attrs = self.attrs
-        Game.tui.addstr(self.__map_h+5, 1, str(attrs['head_pos']))
+        Game.tui.addstr(self.__map_h+5, 1, str(len(attrs['body_pos'])))
 
     def move(self):  # 计算角色移动
         max_x, max_y = self.__map_w, self.__map_h  # 解构赋值最大的x,y坐标值，添加偏移量1
         attrs = self.attrs  # 获得角色（线体）属性
-        x, y = attrs['head_pos']  # 解构赋值头部x,y坐标
+        head_pos = attrs['head_pos']
+        x, y = head_pos  # 解构赋值头部x,y坐标
+        prev_x, prev_y = floor(x), floor(y)  # 上一tick的头部坐标
         vx, vy = attrs['velo']  # 解构赋值x,y速度
         dx, dy = attrs['direction']  # 解构赋值x,y的方向
         # 让线头能穿越屏幕，因为窗口绘制偏差，x和y的初始值从1开始，与之相对max_x,max_y也添加了偏移量1
@@ -152,7 +164,21 @@ class Line:  # 初始化运动线
             1 else (max_x if dx < 0 else 1)
         y = y + (vy*dy) if y >= 1 and y < max_y + \
             1 else (max_y if dy < 0 else 1)
-        attrs['head_pos'] = (x, y)  # 更新头部坐标
+        new_head_pos = (x, y)
+        attrs['head_pos'] = new_head_pos  # 更新头部坐标
+        # 向下取整后蛇身前进了一格
+        body_pos = attrs['body_pos']  # 引用索引
+        body_len = len(body_pos)
+        if not (floor(x) == prev_x and floor(y) == prev_y):
+            if body_len > 0:  # 身体长度大于0再进行处理
+                body_pos = body_pos[1::]
+                body_pos.append((prev_x, prev_y))
+                attrs['body_pos'] = body_pos
+
+    def add_tail(self):  # 检查尾巴
+        body_pos = self.attrs['body_pos']
+        first_pos=body_pos[-1] if len(body_pos)>0 else (0,0) # 获得离头最近的一节尾巴的坐标
+        body_pos.append(first_pos)  # 追加一节尾巴
 
     def control(self):
         attrs = self.attrs  # 获得角色（线体）属性
@@ -198,13 +224,7 @@ class Line:  # 初始化运动线
 
 class Trigger:  # 触发点类
     def __init__(self, line_ins) -> None:
-        self.game_cfg = Game.game_cfg  # 传递当前困难度对应的游戏配置
-        self.map_size = Game.map_size  # 传递游戏区大小
-        self.map_points = Game.map_points  # 传递地图坐标集合
-        self.border_points = Game.border_points  # 传递边框坐标
-        self.styles = Game.styles  # 传递样式表
-        self.hit = line_ins.hit  # 传递碰撞检测方法
-        self.line_attrs = line_ins.attrs  # 传递线体属性，因为attrs是字典，所以传递的是引用哦(⊙o⊙)
+        self.line = line_ins  # 传递line实例
         self.triggers = {}  # 用一个字典来储存触发点
 
     def check(self):  # 检查食物碰撞
@@ -217,25 +237,26 @@ class Trigger:  # 触发点类
                 t_x, t_y = tg['pos']  # 获得触发点坐标
                 # 两坐标相减，如果绝对值<1(格)，就说明在同一块区域，碰撞上了
                 # 判断水平方向碰撞
-                if self.hit(t_x, t_y):
-                    map_h = self.map_size[1]
+                if self.line.hit(t_x, t_y):
+                    map_h = Game.map_size[1]
                     Game.tui.addstr(map_h+4, 1, 'HIT!'+str(ind))
                     Game.add_score()  # 加分
                     del self.triggers[ind]
                     self.make()
+                    self.line.add_tail()
 
     def make(self):  # 做饭...啊不，是随机放置触发点的方法
-        attrs = self.line_attrs  # 获得线体属性
+        attrs = self.line.attrs  # 获得线体属性
         sub = len(self.triggers)  # 获得点坐标储存下标
         exist_points = []+attrs['body_pos']  # 脱离原来的引用
         exist_points.append(attrs['head_pos'])
         exist_triggers = [i['pos']
                           for i in self.triggers.values()]  # 获得所有触发点占用的坐标点
         exist_points += exist_triggers  # exist_points储存的是已经使用的坐标点
-        exist_points += self.border_points  # 还要算入边框的点
+        exist_points += Game.border_points  # 还要算入边框的点
         # 将所有的坐标点和已经使用的坐标点作差集，就是还可以选用的坐标点
-        ava_points = tuple(self.map_points - set(exist_points))
-        trg_config = self.game_cfg['triggers']  # 获得触发点生成比率
+        ava_points = tuple(Game.map_points - set(exist_points))
+        trg_config = Game.game_cfg['triggers']  # 获得触发点生成比率
         chosen_type = Res.ratio_rand(trg_config)  # 使用ratiorand方法来随机生成的类型
         # 生成触发点新出现的坐标
         new_point = {
@@ -247,10 +268,10 @@ class Trigger:  # 触发点类
     def draw(self):  # 输出触发点和相关信息
         for tg in self.triggers.values():
             trg_type = tg['type']  # 该触发点的类型
-            trg_style = self.styles['triggers'][trg_type]  # 获得样式配置
-            # 201号颜色用于触发点
-            curses.init_color(201, *Res.rgb(trg_style['color']))
-            curses.init_pair(10, 201, curses.COLOR_BLACK)  # 10号颜色对用于触发点
+            trg_style = Game.styles['triggers'][trg_type]  # 获得样式配置
+            # 501号颜色用于触发点
+            curses.init_color(501, *Res.rgb(trg_style['color']))
+            curses.init_pair(10, 501, curses.COLOR_BLACK)  # 10号颜色对用于触发点
             x, y = tg['pos']
             Game.game_area.addstr(
                 y, x, trg_style['pattern'], curses.color_pair(10))

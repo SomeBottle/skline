@@ -80,7 +80,7 @@ class Res:
                         "accelerate": 0.22,
                         "decelerate": 0.02,
                         "myopia": 0.13,
-                        "bomb": 0.05,
+                        "bomb": 0.15,
                         "invincibility": 0.03,
                         "stones": 0.21,
                         "teleport": 0.06
@@ -88,8 +88,9 @@ class Res:
                 }
             },
             "styles": {
-                "line_body": "#",
-                "line_color": (11, 170, 239),  # r,g,b
+                "line": "#",
+                "line_head_color": (11, 170, 239),  # r,g,b
+                "line_body_color": (138, 220, 255),
                 'area_border': '#',
                 "border_color": (161, 161, 161),
                 "triggers": {  # 触发点配置
@@ -185,16 +186,16 @@ class Res:
     # 根据比例来随机选择（传入字典，返回随机的字典键）
     @staticmethod
     def ratio_rand(dic):
-        pointer=1 # 指针从1开始
-        luck=random.randint(1,1000) # 从1到1000中选
-        choice=False
-        for k,v in dic.items():
-            cover=v*1000 # 找出该比率在1000中占的份额
+        pointer = 1  # 指针从1开始
+        luck = random.randint(1, 1000)  # 从1到1000中选
+        choice = False
+        for k, v in dic.items():
+            cover = v*1000  # 找出该比率在1000中占的份额
             # 划分区域，像抽奖转盘一样
             if luck >= pointer and luck <= (pointer+cover-1):
-                choice=k
+                choice = k
                 break
-            pointer+=cover
+            pointer += cover
         return choice
 
     @staticmethod

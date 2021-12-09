@@ -8,7 +8,7 @@ class Test:
     def __init__(self) -> None:
         self.test()
         
-    @classmethod
-    def test(cls):
+    @staticmethod
+    def test():
         print('123')
 Test()
