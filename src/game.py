@@ -1,3 +1,4 @@
+# coding:utf-8
 import curses
 import time
 import random
@@ -16,12 +17,15 @@ class Game:
         line_head_color = styles['line_head_color']
         line_body_color = styles['line_body_color']
         border_color = styles['border_color']
+        text_color = styles['text_color']  # 文字颜色
         # 一号颜色对，用于线头
         self.set_color(1, line_head_color)
         # 二号颜色对，用于边框颜色
         self.set_color(2, border_color)
         # 三号颜色对，用于线尾
         self.set_color(3, line_body_color)
+        # 四号颜色对，用于文字
+        self.set_color(4, text_color)
 
     @staticmethod
     def set_color(num, rgb_tuple):
@@ -45,8 +49,11 @@ class Game:
         cls.all_cfg = all_cfg
         cls.game_cfg = game_cfg
         cls.map_size = map_size
-        cls.__score = 0
         cls.tui = curses.initscr()  # 初始化curses，生成tui界面
+
+    @classmethod
+    def reset_score(cls):  # 重置分数
+        cls.__score = 0
 
     @classmethod
     def add_score(cls, num=1):  # 加分
@@ -70,6 +77,10 @@ class Game:
         game_area.keypad(True)  # 支持上下左右等特殊按键
         game_area.nodelay(True)  # 非阻塞，用户没操作游戏要持续进行
         cls.game_area = game_area
+
+    @classmethod
+    def del_area(cls):
+        del cls.game_area
 
     def flash_fx(self, content):
         for i in range(5):
@@ -97,8 +108,18 @@ class Game:
             x, y = point
             self.game_area.addstr(y, x, pattern, curses.color_pair(2))
 
+    def over(self):  # 游戏结束
+        self.tui.erase()  # 擦除内容
+        self.game_area.erase()  # 擦除游戏区域内容
+        over_text = Res().art_texts('gameover')[2]  # 获得艺术字GAME OVER
+        self.tui.addstr(1, 5, Res.x_offset(over_text, 5), curses.color_pair(4))
+        self.tui.refresh()
+        self.del_area() # 删除游戏区域
+        time.sleep(5)
+
     def start(self):  # 开始游戏！
         self.count_down()  # 先调用倒计时
+        self.reset_score()  # 重置分数
         self.create_area()  # 创建游戏绘制区域
         self.create_border()  # 创建边界点坐标
         line_ins = Line()  # 实例化线体
@@ -115,9 +136,11 @@ class Game:
             self.game_area.refresh()
             line_ins.move()  # 移动蛇体
             line_ins.control()  # 接受控制蛇体
+            if line_ins.impact():  # 判断是否有碰撞
+                break
             # tick速度：0.1秒一计算，TPS=10，这个和图形运动速度有很大关联，0.1s一计算也就是刷新率10Hz
             time.sleep(0.1)
-
+        self.over()
 
 class Line:  # 初始化运动线
 
@@ -151,8 +174,24 @@ class Line:  # 初始化运动线
         attrs = self.attrs
         Game.tui.addstr(self.__map_h+5, 1, str(len(attrs['body_pos'])))
 
+    def impact(self):  # 碰撞判断
+        max_x, max_y = self.__map_w, self.__map_h  # 解构赋值最大的x,y坐标值
+        attrs = self.attrs
+        x, y = attrs['head_pos']
+        result = False  # False代表未碰撞，True代表有碰撞
+        judge_border_x = x >= 1 and x < max_x+1
+        judge_border_y = y >= 1 and y < max_y+1
+        # 第一步先判断是否碰到边框
+        if not (judge_border_x and judge_border_y):
+            result = True
+        # 第二步判断是不是碰到自己了
+        elif (floor(x), floor(y)) in attrs['body_pos']:
+            result = True
+
+        return result
+
     def move(self):  # 计算角色移动
-        max_x, max_y = self.__map_w, self.__map_h  # 解构赋值最大的x,y坐标值，添加偏移量1
+        max_x, max_y = self.__map_w, self.__map_h  # 解构赋值最大的x,y坐标值
         attrs = self.attrs  # 获得角色（线体）属性
         head_pos = attrs['head_pos']
         x, y = head_pos  # 解构赋值头部x,y坐标
@@ -177,7 +216,8 @@ class Line:  # 初始化运动线
 
     def add_tail(self):  # 检查尾巴
         body_pos = self.attrs['body_pos']
-        first_pos=body_pos[-1] if len(body_pos)>0 else (0,0) # 获得离头最近的一节尾巴的坐标
+        # 获得离头最近的一节尾巴的坐标
+        first_pos = body_pos[-1] if len(body_pos) > 0 else (0, 0)
         body_pos.append(first_pos)  # 追加一节尾巴
 
     def control(self):

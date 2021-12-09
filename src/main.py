@@ -1,3 +1,4 @@
+# coding:utf-8
 from view import BasicView
 
 if __name__ == '__main__':  # 不是作为模块调用

@@ -1,3 +1,4 @@
+# coding:utf-8
 import time
 import curses
 import base64
@@ -27,6 +28,7 @@ class BasicView:  # 抽象出一个显示界面的类
         somebottle = Res().art_texts('somebottle')[2]
         self.tui.addstr(1, 3, Res.x_offset(somebottle, 3))  # 打印出作者名
         self.tui.refresh()  # 刷新窗口，输出addstr的内容
+        curses.flash() # 闪屏
         time.sleep(1)  # 主界面
 
     def leave(self):
