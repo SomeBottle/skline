@@ -2,6 +2,7 @@
 import curses
 import time
 import random
+import asyncio
 from math import floor
 from resource import Res
 
@@ -110,6 +111,10 @@ class Game:
             x, y = point
             self.game_area.addstr(y, x, pattern, curses.color_pair(2))
 
+    def draw_score(self):
+        map_h = self.map_size[1]
+        self.tui.addstr(map_h+4, 1, 'SCORE: '+str(self.__score))
+
     def over(self):  # 游戏结束
         self.tui.erase()  # 擦除内容
         self.game_area.erase()  # 擦除游戏区域内容
@@ -133,13 +138,14 @@ class Game:
             self.game_area.erase()  # 擦除游戏区域内容
             line_ins.draw_line()  # 绘制线体
             self.draw_border()  # 绘制游戏区域边界
+            self.draw_score()  # 绘制分数
             line_ins.draw_msg()  # 绘制信息
             trg_ins.check()
             trg_ins.draw()
             self.tui.refresh()
             self.game_area.refresh()
-            line_ins.move()  # 移动蛇体
-            line_ins.control()  # 接受控制蛇体
+            line_ins.move()  # 移动线体
+            line_ins.control()  # 接受控制线体
             if line_ins.impact():  # 判断是否有碰撞
                 break
             tick_take = time.time()-tick_start  # 本次tick耗时
@@ -169,6 +175,7 @@ class Line:  # 初始化运动线
             'direction': (random.choice((1, -1)), random.choice((1, -1))),
             'body_pos': []  # 身体各节的位置
         }
+        self.effects = {}  # 线身效果
 
     def draw_line(self):  # 绘制角色
         head_pos = self.attrs['head_pos']
@@ -215,7 +222,7 @@ class Line:  # 初始化运动线
             1 else (max_y if dy < 0 else 1)
         new_head_pos = (x, y)
         attrs['head_pos'] = new_head_pos  # 更新头部坐标
-        # 向下取整后蛇身前进了一格
+        # 向下取整后线身前进了一格
         body_pos = attrs['body_pos']  # 引用索引
         body_len = len(body_pos)
         if not (floor(x) == prev_x and floor(y) == prev_y):
@@ -276,17 +283,6 @@ class Trigger:  # 触发点类
     def __init__(self, line_ins) -> None:
         self.line = line_ins  # 传递line实例
         self.triggers = {}  # 用一个字典来储存触发点
-        self.__trg_funcs = {
-            'normal': self.__trg_normal,
-            'bonus': self.__trg_bonus,
-            'accelerate': self.__trg_accelerate,
-            'decelerate': self.__trg_decelerate,
-            'myopia': self.__trg_myopia,
-            'bomb': self.__trg_bomb,
-            'invincibility': self.__trg_invincibility,
-            'stones': self.__trg_stones,
-            'teleport': self.__trg_teleport
-        }
 
     def check(self):  # 检查食物碰撞
         if len(self.triggers) == 0:  # 没有任何触发点
@@ -299,12 +295,12 @@ class Trigger:  # 触发点类
                 # 两坐标相减，如果绝对值<1(格)，就说明在同一块区域，碰撞上了
                 # 判断水平方向碰撞
                 if self.line.hit(t_x, t_y):
-                    map_h = Game.map_size[1]
-                    Game.tui.addstr(map_h+4, 1, 'HIT!'+str(ind))
-                    Game.add_score()  # 加分
+                    trg_type = tg['type']  # 获得触发点类型
+                    # Game.add_score()  # 加分
                     del self.triggers[ind]
-                    self.make()
-                    self.line.add_tail()
+                    asyncio.run(self.__trg_async(trg_type, (t_x, t_y)))
+                    # self.make()
+                    # self.line.add_tail()
 
     def ava_points(self):  # 获得可用的点
         attrs = self.line.attrs  # 获得线体属性
@@ -340,29 +336,45 @@ class Trigger:  # 触发点类
             Game.game_area.addstr(
                 y, x, trg_style['pattern'], curses.color_pair(10))
 
-    def __trg_normal(self, pos):
+    async def __trg_async(self, trg_type, pos):  # 异步处理分发
+        trg_type='normal' # for test
+        trg_funcs = {
+            'normal': self.__trg_normal,
+            'bonus': self.__trg_bonus,
+            'accelerate': self.__trg_accelerate,
+            'decelerate': self.__trg_decelerate,
+            'myopia': self.__trg_myopia,
+            'bomb': self.__trg_bomb,
+            'invincibility': self.__trg_invincibility,
+            'stones': self.__trg_stones,
+            'teleport': self.__trg_teleport
+        }
+        await trg_funcs[trg_type](pos)
+
+    async def __trg_normal(self, pos):
+        self.line.add_tail()  # 增长尾巴就够了
+        Game.add_score()  # 加分
+
+    async def __trg_bonus(self, pos):
+        Game.add_score()  # 只加分
+
+    async def __trg_accelerate(self, pos):
+        asyncio.run(self.__trg_async('accelerate'))
+
+    async def __trg_decelerate(self, pos):
         pass
 
-    def __trg_bonus(self, pos):
+    async def __trg_myopia(self, pos):
         pass
 
-    def __trg_accelerate(self, pos):
+    async def __trg_bomb(self, pos):
         pass
 
-    def __trg_decelerate(self, pos):
+    async def __trg_invincibility(self, pos):
         pass
 
-    def __trg_myopia(self, pos):
+    async def __trg_stones(self, pos):
         pass
 
-    def __trg_bomb(self, pos):
-        pass
-
-    def __trg_invincibility(self, pos):
-        pass
-
-    def __trg_stones(self, pos):
-        pass
-
-    def __trg_teleport(self, pos):
+    async def __trg_teleport(self, pos):
         pass

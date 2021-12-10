@@ -17,6 +17,12 @@ Curses最开始是由C进行编写，用作终端图形界面（TUI）绘制的�
 
 Curses在Windows平台的补丁包，使得在Windows上能使用Curses库.    
 
+## asyncio  
+
+Python标准库，在Python3.4中加入，3.5进一步被完善。可用于并发执行代码，官方文档：
+
+* https://docs.python.org/zh-cn/3/library/asyncio.html  
+
 ## time  
 
 Python标准库，官方文档：https://docs.python.org/zh-cn/3/library/time.html  

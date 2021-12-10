@@ -25,6 +25,6 @@ TUI游戏，一条像贪吃蛇的线。
 
 ## 如何运行  
 
-* Python环境 ≥ 3.6
+* Python环境 ≥ 3.7
 
 To be updated~  

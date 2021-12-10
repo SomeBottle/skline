@@ -25,7 +25,7 @@ class Res:
                         "bomb": 0.02,
                         "invincibility": 0.05,
                         "stones": 0.1,
-                        "teleport": 0.14
+                        "teleport": 0.15
                     }
                 },
                 "2": {
@@ -39,7 +39,7 @@ class Res:
                         "myopia": 0.01,
                         "bomb": 0.02,
                         "invincibility": 0.05,
-                        "stones": 0.2,
+                        "stones": 0.21,
                         "teleport": 0.14
                     }
                 },
