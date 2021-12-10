@@ -11,6 +11,7 @@ class Res:
         config_path = self.f_path+'/config.json'
         default_config = {  # 默认配置文件
             'difficulty': 1,
+            'tps':10, # ticks per second
             'diff_cfg': {  # 不同困难度对应的配置
                 "1": {
                     "map_size": (50, 15),
@@ -138,7 +139,7 @@ class Res:
         }
         if not path.exists(config_path):  # 如果没有就自动创建配置文件
             with open(config_path, 'w+') as f:
-                f.write(json.dumps(default_config, indent=4))
+                f.write(json.dumps(default_config, indent=2))
 
     def art_texts(self, k):  # 获取艺术字，返回值(高度，长度，艺术字文本)，艺术字都放在了./texts目录下
         file_path = self.f_path+'/texts/'+k+'.txt'
@@ -166,7 +167,7 @@ class Res:
         pre_cfg = self.get_config()  # 获得先前的配置文件
         pre_cfg[key] = val
         with open(file_path, 'w+') as f:
-            f.write(json.dumps(pre_cfg, indent=4))  # 写入修改后的配置
+            f.write(json.dumps(pre_cfg, indent=2))  # 写入修改后的配置
         return True
 
     @staticmethod  # 作为一个静态方法

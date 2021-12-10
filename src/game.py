@@ -40,6 +40,7 @@ class Game:
         all_cfg = Res().get_config()  # 获得游戏配置文件
         difficulty = str(all_cfg['difficulty'])  # json中数字键名都会转换为字符串
         game_cfg = all_cfg['diff_cfg'][difficulty]  # 读取对应困难度的游戏配置
+        tps = all_cfg['tps']  # 获得游戏tps
         map_size = game_cfg['map_size']
         x, y = map_size
         # 根据地图大小生成所有的坐标
@@ -49,6 +50,7 @@ class Game:
         cls.all_cfg = all_cfg
         cls.game_cfg = game_cfg
         cls.map_size = map_size
+        cls.tick_interval = round(1/tps, 4)  # 算出tick间隔，保留四位小数
         cls.tui = curses.initscr()  # 初始化curses，生成tui界面
 
     @classmethod
@@ -114,10 +116,11 @@ class Game:
         over_text = Res().art_texts('gameover')[2]  # 获得艺术字GAME OVER
         self.tui.addstr(1, 5, Res.x_offset(over_text, 5), curses.color_pair(4))
         self.tui.refresh()
-        self.del_area() # 删除游戏区域
+        self.del_area()  # 删除游戏区域
         time.sleep(5)
 
     def start(self):  # 开始游戏！
+        tick_interval = self.tick_interval  # 获得tick间隔时间
         self.count_down()  # 先调用倒计时
         self.reset_score()  # 重置分数
         self.create_area()  # 创建游戏绘制区域
@@ -125,6 +128,7 @@ class Game:
         line_ins = Line()  # 实例化线体
         trg_ins = Trigger(line_ins)  # 实例化触发点，并和线体实例关联
         while True:  # 开始游戏动画
+            tick_start = time.time()  # 本次tick开始时间
             self.tui.erase()  # 擦除内容
             self.game_area.erase()  # 擦除游戏区域内容
             line_ins.draw_line()  # 绘制线体
@@ -138,9 +142,15 @@ class Game:
             line_ins.control()  # 接受控制蛇体
             if line_ins.impact():  # 判断是否有碰撞
                 break
-            # tick速度：0.1秒一计算，TPS=10，这个和图形运动速度有很大关联，0.1s一计算也就是刷新率10Hz
-            time.sleep(0.1)
+            tick_take = time.time()-tick_start  # 本次tick耗时
+            # tick速度：如果0.1秒一计算，TPS=10，这个和图形运动速度有很大关联，0.1s一计算也就是刷新率10Hz
+            # 这里减去了本次tick使用的时间，这样能保证sleep间隔在tick_interval左右
+            if tick_take <= tick_interval:
+                time.sleep(tick_interval-tick_take)
+        curses.flash()  # 撞上什么了就闪屏一下
+        time.sleep(2)  # 游戏结束后凝固两秒
         self.over()
+
 
 class Line:  # 初始化运动线
 
@@ -266,6 +276,17 @@ class Trigger:  # 触发点类
     def __init__(self, line_ins) -> None:
         self.line = line_ins  # 传递line实例
         self.triggers = {}  # 用一个字典来储存触发点
+        self.__trg_funcs = {
+            'normal': self.__trg_normal,
+            'bonus': self.__trg_bonus,
+            'accelerate': self.__trg_accelerate,
+            'decelerate': self.__trg_decelerate,
+            'myopia': self.__trg_myopia,
+            'bomb': self.__trg_bomb,
+            'invincibility': self.__trg_invincibility,
+            'stones': self.__trg_stones,
+            'teleport': self.__trg_teleport
+        }
 
     def check(self):  # 检查食物碰撞
         if len(self.triggers) == 0:  # 没有任何触发点
@@ -285,9 +306,8 @@ class Trigger:  # 触发点类
                     self.make()
                     self.line.add_tail()
 
-    def make(self):  # 做饭...啊不，是随机放置触发点的方法
+    def ava_points(self):  # 获得可用的点
         attrs = self.line.attrs  # 获得线体属性
-        sub = len(self.triggers)  # 获得点坐标储存下标
         exist_points = []+attrs['body_pos']  # 脱离原来的引用
         exist_points.append(attrs['head_pos'])
         exist_triggers = [i['pos']
@@ -295,7 +315,11 @@ class Trigger:  # 触发点类
         exist_points += exist_triggers  # exist_points储存的是已经使用的坐标点
         exist_points += Game.border_points  # 还要算入边框的点
         # 将所有的坐标点和已经使用的坐标点作差集，就是还可以选用的坐标点
-        ava_points = tuple(Game.map_points - set(exist_points))
+        return tuple(Game.map_points - set(exist_points))
+
+    def make(self):  # 做饭...啊不，是随机放置触发点的方法
+        ava_points = self.ava_points()
+        sub = len(self.triggers)  # 获得点坐标储存下标
         trg_config = Game.game_cfg['triggers']  # 获得触发点生成比率
         chosen_type = Res.ratio_rand(trg_config)  # 使用ratiorand方法来随机生成的类型
         # 生成触发点新出现的坐标
@@ -315,3 +339,30 @@ class Trigger:  # 触发点类
             x, y = tg['pos']
             Game.game_area.addstr(
                 y, x, trg_style['pattern'], curses.color_pair(10))
+
+    def __trg_normal(self, pos):
+        pass
+
+    def __trg_bonus(self, pos):
+        pass
+
+    def __trg_accelerate(self, pos):
+        pass
+
+    def __trg_decelerate(self, pos):
+        pass
+
+    def __trg_myopia(self, pos):
+        pass
+
+    def __trg_bomb(self, pos):
+        pass
+
+    def __trg_invincibility(self, pos):
+        pass
+
+    def __trg_stones(self, pos):
+        pass
+
+    def __trg_teleport(self, pos):
+        pass

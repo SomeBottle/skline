@@ -22,6 +22,9 @@ TUI游戏，一条像贪吃蛇的线。
 
 3. [使用的标准库和扩展库](https://github.com/SomeBottle/skline/blob/main/docs/Libraries.md)  
 
+
 ## 如何运行  
+
+* Python环境 ≥ 3.6
 
 To be updated~  
