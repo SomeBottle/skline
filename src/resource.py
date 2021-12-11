@@ -11,7 +11,7 @@ class Res:
         config_path = self.f_path+'/config.json'
         default_config = {  # 默认配置文件
             'difficulty': 1,
-            'tps':10, # ticks per second
+            'tps': 10,  # ticks per second
             'diff_cfg': {  # 不同困难度对应的配置
                 "1": {
                     "map_size": (50, 15),
@@ -95,7 +95,13 @@ class Res:
                 "line_body_color": (138, 220, 255),
                 'area_border': '#',
                 "border_color": (161, 161, 161),
-                "text_color":(255,255,255),
+                "text_color": (255, 255, 255),
+                "to_explode": "*",  # 即将爆炸的图案
+                "to_explode_color": (255, 0, 0),  # 即将爆炸时闪烁的颜色
+                "explode": "*",  # 爆炸粒子图案
+                "explode_color": (255, 215, 15),
+                "flow_stone": "o",  # 流石图案
+                "flow_stone_color": (209, 153, 0),
                 "triggers": {  # 触发点配置
                     "normal": {  # 涨分并增长线体
                         "pattern": "@",

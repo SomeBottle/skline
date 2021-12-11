@@ -49,6 +49,7 @@ class Game:
         cls.map_points = {(xi, yi) for xi in range(1, x+1)
                           for yi in range(1, y+1)}
         cls.explode_points = set()  # 爆炸点
+        cls.flow_stones = set()  # 流石点
         cls.styles = all_cfg['styles']  # 获得样式设定
         cls.all_cfg = all_cfg
         cls.game_cfg = game_cfg
@@ -115,6 +116,16 @@ class Game:
             self.tui.refresh()  # 刷新窗口，输出addstr的内容
             time.sleep(0.2)  # 主界面
 
+    def draw_flow_stones(self):  # 绘制流石
+        if len(self.flow_stones) <= 0:  # 没有流石就不多费力气
+            return False
+        flow_stone = self.styles['flow_stone']
+        flow_stone_color = self.styles['flow_stone_color']
+        self.set_color(22, flow_stone_color)  # 22号颜色对用于流石
+        for pt in self.flow_stones:
+            x, y = pt
+            self.game_area.addstr(y, x, flow_stone, curses.color_pair(22))
+
     def draw_border(self):  # 根据边界点坐标绘制游戏区域边框
         pattern = self.styles['area_border']  # 读取边框样式
         for point in self.border_points:
@@ -133,7 +144,7 @@ class Game:
         self.tui.addstr(1, 5, Res.x_offset(over_text, 5), curses.color_pair(4))
         self.tui.refresh()
         self.del_area()  # 删除游戏区域
-        time.sleep(5)
+        # time.sleep(5)
 
     def cancel_tasks(self):  # 取消所有并行任务
         for task in self.task_list:
@@ -155,6 +166,7 @@ class Game:
             line_ins.draw_line()  # 绘制线体
             self.draw_border()  # 绘制游戏区域边界
             self.draw_score()  # 绘制分数
+            self.draw_flow_stones()  # 绘制流石
             line_ins.draw_msg()  # 绘制信息
             trg_ins.check()
             trg_ins.draw()
@@ -190,7 +202,7 @@ class Line:  # 初始化运动线
             'velo': random.choice(((init_velo, 0), (0, init_velo))),
             # 运动方向(x,y)，-1代表负向。向右为X轴正方向，向下为Y轴正方向
             'direction': (random.choice((1, -1)), random.choice((1, -1))),
-            'body_pos': [(0,0) for i in range(10)],  # 身体各节的位置
+            'body_pos': [(0, 0) for i in range(10)],  # 身体各节的位置
             'invincibility': False,  # 是否无敌
             'myopia': False  # 是否近视
         }
@@ -244,14 +256,18 @@ class Line:  # 初始化运动线
         result = False  # False代表未碰撞，True代表有碰撞
         judge_border_x = x >= 1 and x < max_x+1
         judge_border_y = y >= 1 and y < max_y+1
+        floored = (floor(x), floor(y))
         # 第一步先判断是否碰到边框
         if not (judge_border_x and judge_border_y):
             result = True
         # 第二步判断是不是碰到自己了
-        elif (floor(x), floor(y)) in attrs['body_pos']:
+        elif floored in attrs['body_pos']:
             result = True
         # 第三步判断是不是被炸到了
-        elif (floor(x), floor(y)) in Game.explode_points:
+        elif floored in Game.explode_points:
+            result = True
+        # 第四步判断是不是被流石撞到了
+        elif floored in Game.flow_stones:
             result = True
         return result
 
@@ -392,7 +408,7 @@ class Trigger:  # 触发点类
                 y, x, trg_style['pattern'], curses.color_pair(10))
 
     async def __trg_async(self, trg_type, pos):  # 异步处理分发
-        trg_type = 'bomb'  # for test
+        trg_type = 'stones'  # for test
         trg_funcs = {
             'normal': self.__trg_normal,
             'bonus': self.__trg_bonus,
@@ -457,20 +473,24 @@ class Trigger:  # 触发点类
 
         def keep(attr):
             attrs['myopia'] = True  # 多个近视效果可以叠加
-        await self.__hang_fx(status)
+        await self.__hang_fx(status, False, keep, attrs)
         attrs['myopia'] = False
 
     async def __trg_bomb(self, pos):
         effects = self.line.effects
+        to_explode_color = Game.styles['to_explode_color']
+        to_explode = Game.styles['to_explode']
+        explode_color = Game.styles['explode_color']
+        explode = Game.styles['explode']
         sub = time.time()  # 插入的下标
         status = ['bomb', 0]
         effects[sub] = status
-        Game.set_color(20, (255, 0, 0))  # 20号颜色对用于爆炸点
-        Game.set_color(21, (255, 215, 15))  # 21号颜色对用于爆炸粒子
+        Game.set_color(20, to_explode_color)  # 20号颜色对用于爆炸点
+        Game.set_color(21, explode_color)  # 21号颜色对用于爆炸粒子
         x, y = pos
         for i in range(15):  # 爆炸前闪烁1.5秒
             if i % 2 == 0:
-                Game.game_area.addstr(y, x, '*', curses.color_pair(20))
+                Game.game_area.addstr(y, x, to_explode, curses.color_pair(20))
                 Game.game_area.refresh()
             await asyncio.sleep(0.1)
         # 生成器表达式随机生成爆炸的宽度和高度
@@ -489,7 +509,7 @@ class Trigger:  # 触发点类
             particles_num = random.randrange(3, (explosion_w*explosion_h)//2)
             particles = random.sample(explode_points, particles_num)
             for px, py in particles:
-                Game.game_area.addstr(py, px, '*', curses.color_pair(21))
+                Game.game_area.addstr(py, px, explode, curses.color_pair(21))
             Game.game_area.refresh()
             await asyncio.sleep(0.1)
         Game.explode_points.clear()  # 清空爆炸碰撞点
@@ -506,7 +526,38 @@ class Trigger:  # 触发点类
         attrs['invincibility'] = False
 
     async def __trg_stones(self, pos):
-        pass
+        if len(Game.flow_stones) > 0:  # 如果已经有流石就不重复执行
+            return True
+        status = ['stones', 0]
+        map_w, map_h = Game.map_size  # 获得地图大小
+        effects = self.line.effects
+        sub = time.time()  # 插入的下标
+        effects[sub] = status
+        sample_size = (map_w*map_h)//20  # 流石最多有多少
+        tick_interval = random.randint(4, 8)*0.1  # 随机生成流石速度(tick控制)
+        # 生成流石的坐标
+        stone_points = random.sample(Game.map_points, sample_size)
+        vx, vy, dx, dy = random.choice((  # 流石速度和方向
+            (1, 0, -1, 0),  # (Vx,Vy,x方向,y方向)
+            (1, 0, 1, 0),
+            (0, 1, 0, -1),
+            (0, 1, 0, 1)
+        ))
+        off_points = {(st[0]-map_w*dx, st[1]-map_h*dy) for st in stone_points}
+        stone_appears = False  # 锁定下面的if判断
+        while True:  # 流石滚动
+            off_points = {(st[0]+vx*dx, st[1]+vy*dy)
+                          for st in off_points}  # 偏移点
+            Game.flow_stones.clear()
+            Game.flow_stones.update(Game.cut_points(off_points))
+            # （石头出现过的情况下）地图中没有流石了
+            if stone_appears and len(Game.flow_stones) <= 0:
+                break
+            elif len(Game.flow_stones) > 0:
+                stone_appears = True
+            await asyncio.sleep(tick_interval)
+        Game.flow_stones.clear()  # 清空流石
+        del effects[sub]  # 删除效果
 
     async def __trg_tp(self, pos):
         ava_points = self.ava_points()  # 获得所有可用的点
