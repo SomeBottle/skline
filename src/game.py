@@ -50,12 +50,14 @@ class Game:
                           for yi in range(1, y+1)}
         cls.explode_points = set()  # 爆炸点
         cls.flow_stones = set()  # 流石点
+        cls.short_sighted = False  # 是否近视
         cls.styles = all_cfg['styles']  # 获得样式设定
         cls.all_cfg = all_cfg
         cls.game_cfg = game_cfg
         cls.map_size = map_size
         cls.tick_interval = round(1/tps, 4)  # 算出tick间隔，保留四位小数
         cls.task_list = task_list
+        cls.__ins_list = {}  # 储存实例的列表
         cls.tui = curses.initscr()  # 初始化curses，生成tui界面
 
     @classmethod
@@ -96,6 +98,56 @@ class Game:
     def del_area(cls):
         del cls.game_area, cls.msg_area
 
+    @classmethod
+    def reg_ins(cls, name, ins):
+        cls.__ins_list[name] = ins
+
+    @classmethod
+    def get_ins(cls, name):
+        return cls.__ins_list[name]
+
+    @classmethod
+    def myopia(cls, toggle):  # 是否近视
+        cls.short_sighted = toggle
+
+    # 接管curses addstr，为了适配myopia模式
+    @classmethod
+    def printer(cls, pos_y, pos_x, string, *args):
+        win_obj = cls.game_area
+        if not cls.short_sighted:  # 没有近视就默认情况
+            win_obj.addstr(pos_y, pos_x, string, *args)
+        else:  # 近视了就特殊打印
+            sight_w = 5  # 视野宽度
+            sight_h = 5  # 视野高度
+            map_w, map_h = cls.map_size  # 获得地图尺寸
+            x_ratio = map_w//sight_w  # x方向比例
+            y_ratio = map_h//sight_h  # y方向比例
+            x_center = map_w//2  # 地图中x方向中心
+            y_center = map_h//2  # 地图中y方向中心
+            line_ins = cls.get_ins('line')  # 取出ins实例
+            x, y = map(floor, line_ins.attrs['head_pos'])
+            l_t_x = x - (sight_w-1)//2
+            l_t_y = y - (sight_h-1)//2
+            # 得到视野区所有坐标点
+            sight_points = {(xi, yi) for yi in range(l_t_y, l_t_y+sight_h)
+                            for xi in range(l_t_x, l_t_x+sight_w)}
+            if (pos_x, pos_y) in sight_points:  # 如果要打印的内容在视野区
+                relative_x = pos_x-x  # x方向上相对头部距离
+                relative_y = pos_y-y  # y方向上相对头部距离
+                c_t_x = x_center+relative_x*x_ratio  # 找出在放大视野中的中心x坐标
+                c_t_y = y_center+relative_y*y_ratio  # 找出在放大视野中的中心y坐标
+                # 接下来要放大这一个点
+                half_w = floor((x_ratio-1)/2)  # 先找出一半宽度，向上取整
+                half_h = floor((y_ratio-1)/2)  # 找出一半高度
+                new_l_t_x = c_t_x-half_w  # 这一个方块的左上角x坐标
+                new_l_t_y = c_t_y-half_h  # 这一个方块的左上角y坐标
+                # 获得渲染这个方块的点坐标
+                block_points = {(bx, by) for by in range(
+                    new_l_t_y, new_l_t_y+y_ratio) for bx in range(new_l_t_x, new_l_t_x+x_ratio)}
+                for pt in cls.cut_points(block_points):  # 去掉地图外面的点，防止出错
+                    bx, by = pt
+                    win_obj.addstr(by, bx, string, *args)
+
     def flash_fx(self, content):
         for i in range(5):
             self.tui.erase()
@@ -124,13 +176,13 @@ class Game:
         self.set_color(22, flow_stone_color)  # 22号颜色对用于流石
         for pt in self.flow_stones:
             x, y = pt
-            self.game_area.addstr(y, x, flow_stone, curses.color_pair(22))
+            self.printer(y, x, flow_stone, curses.color_pair(22))
 
     def draw_border(self):  # 根据边界点坐标绘制游戏区域边框
         pattern = self.styles['area_border']  # 读取边框样式
         for point in self.border_points:
             x, y = point
-            self.game_area.addstr(y, x, pattern, curses.color_pair(2))
+            self.printer(y, x, pattern, curses.color_pair(2))
 
     def draw_score(self):
         map_h = self.map_size[1]
@@ -141,7 +193,8 @@ class Game:
         self.tui.erase()  # 擦除内容
         self.game_area.erase()  # 擦除游戏区域内容
         over_text = Res().art_texts('gameover')[2]  # 获得艺术字GAME OVER
-        self.tui.addstr(1, 5, Res.x_offset(over_text, 5), curses.color_pair(4))
+        self.tui.addstr(1, 5, Res.x_offset(
+            over_text, 5), curses.color_pair(4))
         self.tui.refresh()
         self.del_area()  # 删除游戏区域
         # time.sleep(5)
@@ -157,7 +210,8 @@ class Game:
         self.create_area()  # 创建游戏绘制区域
         self.create_border()  # 创建边界点坐标
         line_ins = Line()  # 实例化线体
-        trg_ins = Trigger(line_ins)  # 实例化触发点，并和线体实例关联
+        Game.reg_ins('line', line_ins)  # 在Game类上注册（保留）实例
+        trg_ins = Trigger()  # 实例化触发点，并和线体实例关联
         while True:  # 开始游戏动画
             tick_start = time.time()  # 本次tick开始时间
             self.tui.erase()  # 擦除内容
@@ -223,9 +277,9 @@ class Line:  # 初始化运动线
         head_x, head_y = map(floor, head_pos)  # 解构赋值
         line_body = Game.styles['line']
         for t in body_pos:  # 绘制尾部
-            Game.game_area.addstr(t[1], t[0], line_body, curses.color_pair(3))
+            Game.printer(t[1], t[0], line_body, curses.color_pair(3))
         # 使用1号颜色对进行头部绘制
-        Game.game_area.addstr(head_y, head_x, line_body, curses.color_pair(1))
+        Game.printer(head_y, head_x, line_body, curses.color_pair(1))
 
     def draw_msg(self):  # 绘制线体相关信息，位于游戏区域下方
         line = 1
@@ -351,8 +405,8 @@ class Line:  # 初始化运动线
 
 
 class Trigger:  # 触发点类
-    def __init__(self, line_ins) -> None:
-        self.line = line_ins  # 传递line实例
+    def __init__(self) -> None:
+        self.line = Game.get_ins('line')  # 传递line实例
         self.triggers = {}  # 用一个字典来储存触发点
 
     def check(self):  # 检查食物碰撞
@@ -404,11 +458,10 @@ class Trigger:  # 触发点类
             trg_style = Game.styles['triggers'][trg_type]  # 获得样式配置
             Game.set_color(10, trg_style['color'])  # 10号颜色对用于触发点
             x, y = tg['pos']
-            Game.game_area.addstr(
-                y, x, trg_style['pattern'], curses.color_pair(10))
+            Game.printer(y, x, trg_style['pattern'], curses.color_pair(10))
 
     async def __trg_async(self, trg_type, pos):  # 异步处理分发
-        trg_type = 'stones'  # for test
+        trg_type = 'myopia'  # for test
         trg_funcs = {
             'normal': self.__trg_normal,
             'bonus': self.__trg_bonus,
@@ -467,14 +520,13 @@ class Trigger:  # 触发点类
             self.line.velo = current_speed+velo_rmv  # 恢复速度
 
     async def __trg_myopia(self, pos):
-        last_for = 5  # 效果持续5秒
+        last_for = 3  # 效果持续3秒
         status = ['myopia', last_for]
-        attrs = self.line.attrs
 
-        def keep(attr):
-            attrs['myopia'] = True  # 多个近视效果可以叠加
-        await self.__hang_fx(status, False, keep, attrs)
-        attrs['myopia'] = False
+        def keep():
+            Game.myopia(True)  # 多个近视效果可以叠加
+        await self.__hang_fx(status, False, keep)
+        Game.myopia(False)
 
     async def __trg_bomb(self, pos):
         effects = self.line.effects
@@ -490,7 +542,7 @@ class Trigger:  # 触发点类
         x, y = pos
         for i in range(15):  # 爆炸前闪烁1.5秒
             if i % 2 == 0:
-                Game.game_area.addstr(y, x, to_explode, curses.color_pair(20))
+                Game.printer(y, x, to_explode, curses.color_pair(20))
                 Game.game_area.refresh()
             await asyncio.sleep(0.1)
         # 生成器表达式随机生成爆炸的宽度和高度
@@ -509,7 +561,7 @@ class Trigger:  # 触发点类
             particles_num = random.randrange(3, (explosion_w*explosion_h)//2)
             particles = random.sample(explode_points, particles_num)
             for px, py in particles:
-                Game.game_area.addstr(py, px, explode, curses.color_pair(21))
+                Game.printer(py, px, explode, curses.color_pair(21))
             Game.game_area.refresh()
             await asyncio.sleep(0.1)
         Game.explode_points.clear()  # 清空爆炸碰撞点
@@ -533,7 +585,8 @@ class Trigger:  # 触发点类
         effects = self.line.effects
         sub = time.time()  # 插入的下标
         effects[sub] = status
-        sample_size = (map_w*map_h)//20  # 流石最多有多少
+        devider = random.randint(15, 21)
+        sample_size = (map_w*map_h)//devider  # 流石最多有多少
         tick_interval = random.randint(4, 8)*0.1  # 随机生成流石速度(tick控制)
         # 生成流石的坐标
         stone_points = random.sample(Game.map_points, sample_size)
