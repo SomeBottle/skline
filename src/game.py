@@ -185,15 +185,16 @@ class Line:  # 初始化运动线
             'velo': random.choice(((init_velo, 0), (0, init_velo))),
             # 运动方向(x,y)，-1代表负向。向右为X轴正方向，向下为Y轴正方向
             'direction': (random.choice((1, -1)), random.choice((1, -1))),
-            'body_pos': []  # 身体各节的位置
+            'body_pos': [],  # 身体各节的位置
+            'invincibility': False  # 是否无敌
         }
         self.effects = {}  # 线身效果
         self.fx_dict = {  # 效果对照表
             'accelerate': 'Speed UP',
-            'decelerate': 'Speed DOWN',
+            'decelerate': 'Speed Down',
             'myopia': 'Myopia',
             'bomb': 'THE BOMB!',
-            'invicibility': 'Invicibility',
+            'invincibility': 'Invincibility',
             'stones': 'Watch out the stones',
             'teleport': 'Teleported'
         }
@@ -220,8 +221,10 @@ class Line:  # 初始化运动线
             line += 1
 
     def impact(self):  # 碰撞判断
-        max_x, max_y = self.__map_w, self.__map_h  # 解构赋值最大的x,y坐标值
         attrs = self.attrs
+        if attrs['invincibility']:  # 如果无敌就直接跳过
+            return False
+        max_x, max_y = self.__map_w, self.__map_h  # 解构赋值最大的x,y坐标值
         x, y = attrs['head_pos']
         result = False  # False代表未碰撞，True代表有碰撞
         judge_border_x = x >= 1 and x < max_x+1
@@ -372,7 +375,7 @@ class Trigger:  # 触发点类
                 y, x, trg_style['pattern'], curses.color_pair(10))
 
     async def __trg_async(self, trg_type, pos):  # 异步处理分发
-        trg_type = 'accelerate'  # for test
+        trg_type = 'invincibility'  # for test
         trg_funcs = {
             'normal': self.__trg_normal,
             'bonus': self.__trg_bonus,
@@ -386,6 +389,19 @@ class Trigger:  # 触发点类
         }
         await trg_funcs[trg_type](pos)
 
+    # 挂起效果(status,是否只弹一下,在循环里执行的额外函数，用于额外函数的参数)
+    async def __hang_fx(self, status, pop=False, extra_func=False, *args):
+        effects = self.line.effects
+        sub = time.time()  # 插入的下标
+        effects[sub] = status
+        last_for, minus = (status[1], 1) if not pop else (2, 0)
+        for i in range(last_for):  # 持续last_for秒
+            status[1] -= minus
+            if extra_func:
+                extra_func(*args)
+            await asyncio.sleep(1)
+        del effects[sub]  # 删除效果
+
     async def __trg_normal(self, pos):
         self.line.add_tail()  # 增长尾巴就够了
         Game.add_score()  # 加分
@@ -396,23 +412,26 @@ class Trigger:  # 触发点类
     async def __trg_acce(self, pos):
         last_for = 5  # 效果持续5秒
         velo_add = 0.2  # 增加的速度
-        effects = self.line.effects
-        sub = time.time()  # 插入的下标
         status = ['accelerate', last_for]
         velo_before = self.line.velo  # 之前的速度
         temp_velo = velo_before+velo_add  # 暂且而言的新速度
         if temp_velo <= 1:  # 速度封顶
-            effects[sub] = status
             self.line.velo = temp_velo  # 设置速度
-            for i in range(last_for):  # 持续last_for秒
-                status[1] -= 1
-                await asyncio.sleep(1)
+            await self.__hang_fx(status)
             current_speed = self.line.velo  # 因为是异步执行，速度可能已经改变了，再获取一次
             self.line.velo = current_speed-velo_add  # 恢复速度
-            del effects[sub]  # 删除效果
 
     async def __trg_dece(self, pos):
-        pass
+        last_for = 5  # 效果持续5秒
+        velo_rmv = 0.2  # 降低的速度
+        status = ['decelerate', last_for]
+        velo_before = self.line.velo  # 之前的速度
+        temp_velo = velo_before-velo_rmv  # 暂且而言的新速度
+        if temp_velo > 0:  # 速度封底
+            self.line.velo = temp_velo  # 设置速度
+            await self.__hang_fx(status)
+            current_speed = self.line.velo  # 因为是异步执行，速度可能已经改变了，再获取一次
+            self.line.velo = current_speed+velo_rmv  # 恢复速度
 
     async def __trg_myopia(self, pos):
         pass
@@ -421,10 +440,21 @@ class Trigger:  # 触发点类
         pass
 
     async def __trg_ivcb(self, pos):
-        pass
+        last_for = 6  # 效果持续6秒
+        status = ['invincibility', last_for]
+        attrs = self.line.attrs
+
+        def keep(attr):
+            attrs['invincibility'] = True  # 多个无敌效果可以叠加
+        await self.__hang_fx(status, False, keep, attrs)
+        attrs['invincibility'] = False
 
     async def __trg_stones(self, pos):
         pass
 
     async def __trg_tp(self, pos):
-        pass
+        ava_points = self.ava_points()  # 获得所有可用的点
+        attrs = self.line.attrs
+        attrs['head_pos'] = random.choice(ava_points)  # 把头随机传送到一个地方
+        status = ['teleport', 0]
+        await self.__hang_fx(status, True)
