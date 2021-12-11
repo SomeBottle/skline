@@ -233,7 +233,7 @@ class Line:  # 初始化运动线
         for k, v in enumerate(bodies):
             if v in points:
                 cut_from = k  # 从靠头部最近的地方截断
-        attrs['body_pos'] = bodies[cut_from::]
+        attrs['body_pos'] = bodies[cut_from+1::]
 
     def impact(self):  # 碰撞判断
         attrs = self.attrs
