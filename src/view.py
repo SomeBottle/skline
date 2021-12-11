@@ -15,7 +15,6 @@ class BasicView:  # 基类
 
     def create_win(self, title_txt):
         self.tui.erase()
-        title_txt = Res().art_texts('skline')  # 获得艺术字元组
         title_offset_h = title_txt[0]+4  # 标题窗口高度
         title_offset_w = title_txt[1]+4  # 标题窗口宽度
         # 创建一个窗口（其实是当边框使），这里+2是因为在addstr时文本有偏移
@@ -55,13 +54,13 @@ class MenuView(BasicView):  # 派生出一个显示界面的类
         curses.flash()  # 闪屏
         time.sleep(1)  # 主界面
 
-    async def asyncio_game(self): # 开启并行任务
-        task_list=[]
-        game=Game(task_list) # 向实例传入任务列表
-        task_list.append(asyncio.create_task(game.start()))
+    async def asyncio_game(self):  # 开启并行任务
+        task_list = set()
+        game = Game(task_list)  # 向实例传入任务列表
+        task_list.add(asyncio.create_task(game.start()))
         await asyncio.wait(task_list)
 
-    def start_game(self): # 开始游戏
+    def start_game(self):  # 开始游戏
         asyncio.run(self.asyncio_game())
 
     def leave(self):

@@ -48,6 +48,7 @@ class Game:
         # 根据地图大小生成所有的坐标
         cls.map_points = {(xi, yi) for xi in range(1, x+1)
                           for yi in range(1, y+1)}
+        cls.explode_points = set()  # 爆炸点
         cls.styles = all_cfg['styles']  # 获得样式设定
         cls.all_cfg = all_cfg
         cls.game_cfg = game_cfg
@@ -55,6 +56,10 @@ class Game:
         cls.tick_interval = round(1/tps, 4)  # 算出tick间隔，保留四位小数
         cls.task_list = task_list
         cls.tui = curses.initscr()  # 初始化curses，生成tui界面
+
+    @classmethod
+    def cut_points(cls, points):  # 裁剪地图外的点(传入一个点集合)
+        return points & cls.map_points
 
     @classmethod
     def reset_score(cls):  # 重置分数
@@ -185,8 +190,9 @@ class Line:  # 初始化运动线
             'velo': random.choice(((init_velo, 0), (0, init_velo))),
             # 运动方向(x,y)，-1代表负向。向右为X轴正方向，向下为Y轴正方向
             'direction': (random.choice((1, -1)), random.choice((1, -1))),
-            'body_pos': [],  # 身体各节的位置
-            'invincibility': False  # 是否无敌
+            'body_pos': [(0,0) for i in range(10)],  # 身体各节的位置
+            'invincibility': False,  # 是否无敌
+            'myopia': False  # 是否近视
         }
         self.effects = {}  # 线身效果
         self.fx_dict = {  # 效果对照表
@@ -211,7 +217,7 @@ class Line:  # 初始化运动线
 
     def draw_msg(self):  # 绘制线体相关信息，位于游戏区域下方
         line = 1
-        for k, fx in self.effects.items():
+        for fx in self.effects.values():
             trg_type = fx[0]  # 该触发点的类型
             trg_style = Game.styles['triggers'][trg_type]  # 获得样式配置
             Game.set_color(11, trg_style['color'])  # 用触发点的颜色来打印文字
@@ -219,6 +225,15 @@ class Line:  # 初始化运动线
             text = self.fx_dict[trg_type]+remain
             Game.msg_area.addstr(line, 0, text, curses.color_pair(11))
             line += 1
+
+    def tail_impact(self, points):  # 削尾巴判断
+        attrs = self.attrs
+        bodies = attrs['body_pos']
+        cut_from = 0  # 从哪里截断
+        for k, v in enumerate(bodies):
+            if v in points:
+                cut_from = k  # 从靠头部最近的地方截断
+        attrs['body_pos'] = bodies[cut_from::]
 
     def impact(self):  # 碰撞判断
         attrs = self.attrs
@@ -235,7 +250,9 @@ class Line:  # 初始化运动线
         # 第二步判断是不是碰到自己了
         elif (floor(x), floor(y)) in attrs['body_pos']:
             result = True
-
+        # 第三步判断是不是被炸到了
+        elif (floor(x), floor(y)) in Game.explode_points:
+            result = True
         return result
 
     def move(self):  # 计算角色移动
@@ -262,7 +279,7 @@ class Line:  # 初始化运动线
                 body_pos.append((prev_x, prev_y))
                 attrs['body_pos'] = body_pos
 
-    def add_tail(self):  # 检查尾巴
+    def add_tail(self):  # 加长尾巴
         body_pos = self.attrs['body_pos']
         # 获得离头最近的一节尾巴的坐标
         first_pos = body_pos[-1] if len(body_pos) > 0 else (0, 0)
@@ -338,7 +355,7 @@ class Trigger:  # 触发点类
                     del self.triggers[ind]
                     new_task = asyncio.create_task(
                         self.__trg_async(trg_type, (t_x, t_y)))
-                    Game.task_list.append(new_task)
+                    Game.task_list.add(new_task)
                     # self.make()
                     # self.line.add_tail()
 
@@ -375,7 +392,7 @@ class Trigger:  # 触发点类
                 y, x, trg_style['pattern'], curses.color_pair(10))
 
     async def __trg_async(self, trg_type, pos):  # 异步处理分发
-        trg_type = 'invincibility'  # for test
+        trg_type = 'bomb'  # for test
         trg_funcs = {
             'normal': self.__trg_normal,
             'bonus': self.__trg_bonus,
@@ -434,10 +451,49 @@ class Trigger:  # 触发点类
             self.line.velo = current_speed+velo_rmv  # 恢复速度
 
     async def __trg_myopia(self, pos):
-        pass
+        last_for = 5  # 效果持续5秒
+        status = ['myopia', last_for]
+        attrs = self.line.attrs
+
+        def keep(attr):
+            attrs['myopia'] = True  # 多个近视效果可以叠加
+        await self.__hang_fx(status)
+        attrs['myopia'] = False
 
     async def __trg_bomb(self, pos):
-        pass
+        effects = self.line.effects
+        sub = time.time()  # 插入的下标
+        status = ['bomb', 0]
+        effects[sub] = status
+        Game.set_color(20, (255, 0, 0))  # 20号颜色对用于爆炸点
+        Game.set_color(21, (255, 215, 15))  # 21号颜色对用于爆炸粒子
+        x, y = pos
+        for i in range(15):  # 爆炸前闪烁1.5秒
+            if i % 2 == 0:
+                Game.game_area.addstr(y, x, '*', curses.color_pair(20))
+                Game.game_area.refresh()
+            await asyncio.sleep(0.1)
+        # 生成器表达式随机生成爆炸的宽度和高度
+        explosion_w, explosion_h = (random.choice((3, 5)) for i in range(2))
+        # 生成爆炸范围左上角的坐标
+        start_x, start_y = (x-floor((explosion_w-1)/2),
+                            y-floor((explosion_h-1)/2))
+        # 爆炸点
+        explode_points = {(xi, yi) for yi in range(
+            start_y, start_y+explosion_h) for xi in range(start_x, start_x+explosion_w)}
+        explode_points = Game.cut_points(explode_points)  # 裁剪地图边界外的点，避免出错
+        Game.explode_points.update(explode_points)  # 向游戏主体传入爆炸碰撞点
+        self.line.tail_impact(explode_points)  # 爆炸削掉尾巴
+        # 选取显示的粒子样本中的粒子数量
+        for i in range(5):  # 爆炸粒子动画0.5秒
+            particles_num = random.randrange(3, (explosion_w*explosion_h)//2)
+            particles = random.sample(explode_points, particles_num)
+            for px, py in particles:
+                Game.game_area.addstr(py, px, '*', curses.color_pair(21))
+            Game.game_area.refresh()
+            await asyncio.sleep(0.1)
+        Game.explode_points.clear()  # 清空爆炸碰撞点
+        del effects[sub]  # 删除效果
 
     async def __trg_ivcb(self, pos):
         last_for = 6  # 效果持续6秒
