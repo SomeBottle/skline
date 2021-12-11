@@ -185,8 +185,10 @@ class Game:
             self.printer(y, x, pattern, curses.color_pair(2))
 
     def draw_score(self):
-        map_h = self.map_size[1]
-        self.msg_area.addstr(0, 0, 'SCORE: '+str(self.__score))
+        line_ins = self.get_ins('line')
+        score_text = f'SCORE: {self.__score} '
+        len_text = f'LENGTH: {len(line_ins.attrs["body_pos"])}'
+        self.msg_area.addstr(0, 0, score_text+len_text)
 
     def over(self):  # 游戏结束
         self.cancel_tasks()  # 取消所有任务
@@ -197,7 +199,7 @@ class Game:
             over_text, 5), curses.color_pair(4))
         self.tui.refresh()
         self.del_area()  # 删除游戏区域
-        # time.sleep(5)
+        time.sleep(5)
 
     def cancel_tasks(self):  # 取消所有并行任务
         for task in self.task_list:
@@ -256,7 +258,7 @@ class Line:  # 初始化运动线
             'velo': random.choice(((init_velo, 0), (0, init_velo))),
             # 运动方向(x,y)，-1代表负向。向右为X轴正方向，向下为Y轴正方向
             'direction': (random.choice((1, -1)), random.choice((1, -1))),
-            'body_pos': [(0, 0) for i in range(10)],  # 身体各节的位置
+            'body_pos': [],  # 身体各节的位置
             'invincibility': False,  # 是否无敌
             'myopia': False  # 是否近视
         }
@@ -264,7 +266,7 @@ class Line:  # 初始化运动线
         self.fx_dict = {  # 效果对照表
             'accelerate': 'Speed UP',
             'decelerate': 'Speed Down',
-            'myopia': 'Myopia',
+            'myopia': 'Short-sighted! Watch out!',
             'bomb': 'THE BOMB!',
             'invincibility': 'Invincibility',
             'stones': 'Watch out the stones',
@@ -461,7 +463,6 @@ class Trigger:  # 触发点类
             Game.printer(y, x, trg_style['pattern'], curses.color_pair(10))
 
     async def __trg_async(self, trg_type, pos):  # 异步处理分发
-        trg_type = 'myopia'  # for test
         trg_funcs = {
             'normal': self.__trg_normal,
             'bonus': self.__trg_bonus,
@@ -489,15 +490,17 @@ class Trigger:  # 触发点类
         del effects[sub]  # 删除效果
 
     async def __trg_normal(self, pos):
-        self.line.add_tail()  # 增长尾巴就够了
+        self.line.add_tail()  # 增长尾巴
         Game.add_score()  # 加分
 
     async def __trg_bonus(self, pos):
         Game.add_score()  # 只加分
 
     async def __trg_acce(self, pos):
+        self.line.add_tail()  # 增长尾巴
         last_for = 5  # 效果持续5秒
         velo_add = 0.2  # 增加的速度
+        Game.add_score()  # 加分
         status = ['accelerate', last_for]
         velo_before = self.line.velo  # 之前的速度
         temp_velo = velo_before+velo_add  # 暂且而言的新速度
@@ -508,6 +511,7 @@ class Trigger:  # 触发点类
             self.line.velo = current_speed-velo_add  # 恢复速度
 
     async def __trg_dece(self, pos):
+        self.line.add_tail()  # 增长尾巴
         last_for = 5  # 效果持续5秒
         velo_rmv = 0.2  # 降低的速度
         status = ['decelerate', last_for]
@@ -522,6 +526,7 @@ class Trigger:  # 触发点类
     async def __trg_myopia(self, pos):
         last_for = 3  # 效果持续3秒
         status = ['myopia', last_for]
+        Game.add_score()  # 加分
 
         def keep():
             Game.myopia(True)  # 多个近视效果可以叠加
@@ -529,6 +534,7 @@ class Trigger:  # 触发点类
         Game.myopia(False)
 
     async def __trg_bomb(self, pos):
+        self.line.add_tail()  # 增长尾巴
         effects = self.line.effects
         to_explode_color = Game.styles['to_explode_color']
         to_explode = Game.styles['to_explode']
@@ -568,6 +574,7 @@ class Trigger:  # 触发点类
         del effects[sub]  # 删除效果
 
     async def __trg_ivcb(self, pos):
+        self.line.add_tail()  # 增长尾巴
         last_for = 6  # 效果持续6秒
         status = ['invincibility', last_for]
         attrs = self.line.attrs
@@ -578,6 +585,8 @@ class Trigger:  # 触发点类
         attrs['invincibility'] = False
 
     async def __trg_stones(self, pos):
+        self.line.add_tail()  # 增长尾巴
+        Game.add_score()  # 加分
         if len(Game.flow_stones) > 0:  # 如果已经有流石就不重复执行
             return True
         status = ['stones', 0]
@@ -613,6 +622,8 @@ class Trigger:  # 触发点类
         del effects[sub]  # 删除效果
 
     async def __trg_tp(self, pos):
+        self.line.add_tail()  # 增长尾巴
+        Game.add_score()  # 加分
         ava_points = self.ava_points()  # 获得所有可用的点
         attrs = self.line.attrs
         attrs['head_pos'] = random.choice(ava_points)  # 把头随机传送到一个地方

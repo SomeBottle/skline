@@ -19,9 +19,9 @@ class Res:
                     "triggers": {  # 触发点的生成概率，支持小数点后三位
                         "normal": 0.5,
                         "bonus": 0.05,
-                        "accelerate": 0.1,
+                        "accelerate": 0.08,
                         "decelerate": 0.02,
-                        "myopia": 0.01,
+                        "myopia": 0.03,
                         "bomb": 0.02,
                         "invincibility": 0.05,
                         "stones": 0.1,
