@@ -2,6 +2,7 @@
 import time
 import curses
 import base64
+import asyncio
 from resource import Res
 from game import Game
 
@@ -40,7 +41,7 @@ class MenuView(BasicView):  # 派生出一个显示界面的类
             2: 'Exit'
         }
         self.choice_func = {  # 上述选项对应的函数
-            0: Game().start,
+            0: self.start_game,
             1: DifficultyView().show_panel,
             2: self.leave
         }
@@ -53,6 +54,15 @@ class MenuView(BasicView):  # 派生出一个显示界面的类
         self.tui.refresh()  # 刷新窗口，输出addstr的内容
         curses.flash()  # 闪屏
         time.sleep(1)  # 主界面
+
+    async def asyncio_game(self): # 开启并行任务
+        task_list=[]
+        game=Game(task_list) # 向实例传入任务列表
+        task_list.append(asyncio.create_task(game.start()))
+        await asyncio.wait(task_list)
+
+    def start_game(self): # 开始游戏
+        asyncio.run(self.asyncio_game())
 
     def leave(self):
         print(base64.b64decode(Res.author()).decode("utf-8"))

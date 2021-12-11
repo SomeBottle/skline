@@ -8,8 +8,9 @@ from resource import Res
 
 
 class Game:
-    def __init__(self) -> None:
-        self.cls_init()  # 重初始化类属性
+    def __init__(self, task_list) -> None:
+        self.cls_init(task_list)  # 重初始化类属性
+        self.task_list = task_list  # 传递并发任务列表
         curses.noecho()  # 无回显模式
         curses.start_color()  # 初始化颜色
         self.tui.nodelay(True)  # getch不阻塞
@@ -37,7 +38,7 @@ class Game:
     # 初始化类属性，这样写是为了每次实例化Game()时都对应更新类属性
     # 为什么要全写成类属性呢，这是为了开放公共属性供Line,Trigger类实例使用，便于管理
     @classmethod
-    def cls_init(cls):
+    def cls_init(cls, task_list):
         all_cfg = Res().get_config()  # 获得游戏配置文件
         difficulty = str(all_cfg['difficulty'])  # json中数字键名都会转换为字符串
         game_cfg = all_cfg['diff_cfg'][difficulty]  # 读取对应困难度的游戏配置
@@ -52,6 +53,7 @@ class Game:
         cls.game_cfg = game_cfg
         cls.map_size = map_size
         cls.tick_interval = round(1/tps, 4)  # 算出tick间隔，保留四位小数
+        cls.task_list = task_list
         cls.tui = curses.initscr()  # 初始化curses，生成tui界面
 
     @classmethod
@@ -77,13 +79,16 @@ class Game:
         map_w, map_h = map(lambda x: x+3, cls.map_size)  # 获得地图大小
         # 根据地图大小创建游戏区域，要比地图大小稍微大一点
         game_area = curses.newwin(map_h, map_w, 1, 1)
+        msg_area = curses.newwin(7, map_w, map_h+1, 1)
         game_area.keypad(True)  # 支持上下左右等特殊按键
         game_area.nodelay(True)  # 非阻塞，用户没操作游戏要持续进行
+        msg_area.nodelay(True)
         cls.game_area = game_area
+        cls.msg_area = msg_area
 
     @classmethod
     def del_area(cls):
-        del cls.game_area
+        del cls.game_area, cls.msg_area
 
     def flash_fx(self, content):
         for i in range(5):
@@ -113,9 +118,10 @@ class Game:
 
     def draw_score(self):
         map_h = self.map_size[1]
-        self.tui.addstr(map_h+4, 1, 'SCORE: '+str(self.__score))
+        self.msg_area.addstr(0, 0, 'SCORE: '+str(self.__score))
 
     def over(self):  # 游戏结束
+        self.cancel_tasks()  # 取消所有任务
         self.tui.erase()  # 擦除内容
         self.game_area.erase()  # 擦除游戏区域内容
         over_text = Res().art_texts('gameover')[2]  # 获得艺术字GAME OVER
@@ -124,7 +130,11 @@ class Game:
         self.del_area()  # 删除游戏区域
         time.sleep(5)
 
-    def start(self):  # 开始游戏！
+    def cancel_tasks(self):  # 取消所有并行任务
+        for task in self.task_list:
+            task.cancel()
+
+    async def start(self):  # 开始游戏！
         tick_interval = self.tick_interval  # 获得tick间隔时间
         self.count_down()  # 先调用倒计时
         self.reset_score()  # 重置分数
@@ -135,6 +145,7 @@ class Game:
         while True:  # 开始游戏动画
             tick_start = time.time()  # 本次tick开始时间
             self.tui.erase()  # 擦除内容
+            self.msg_area.erase()
             self.game_area.erase()  # 擦除游戏区域内容
             line_ins.draw_line()  # 绘制线体
             self.draw_border()  # 绘制游戏区域边界
@@ -143,6 +154,7 @@ class Game:
             trg_ins.check()
             trg_ins.draw()
             self.tui.refresh()
+            self.msg_area.refresh()
             self.game_area.refresh()
             line_ins.move()  # 移动线体
             line_ins.control()  # 接受控制线体
@@ -152,9 +164,9 @@ class Game:
             # tick速度：如果0.1秒一计算，TPS=10，这个和图形运动速度有很大关联，0.1s一计算也就是刷新率10Hz
             # 这里减去了本次tick使用的时间，这样能保证sleep间隔在tick_interval左右
             if tick_take <= tick_interval:
-                time.sleep(tick_interval-tick_take)
+                await asyncio.sleep(tick_interval-tick_take)
         curses.flash()  # 撞上什么了就闪屏一下
-        time.sleep(2)  # 游戏结束后凝固两秒
+        await asyncio.sleep(2)  # 游戏结束后凝固两秒
         self.over()
 
 
@@ -176,6 +188,15 @@ class Line:  # 初始化运动线
             'body_pos': []  # 身体各节的位置
         }
         self.effects = {}  # 线身效果
+        self.fx_dict = {  # 效果对照表
+            'accelerate': 'Speed UP',
+            'decelerate': 'Speed DOWN',
+            'myopia': 'Myopia',
+            'bomb': 'THE BOMB!',
+            'invicibility': 'Invicibility',
+            'stones': 'Watch out the stones',
+            'teleport': 'Teleported'
+        }
 
     def draw_line(self):  # 绘制角色
         head_pos = self.attrs['head_pos']
@@ -188,8 +209,15 @@ class Line:  # 初始化运动线
         Game.game_area.addstr(head_y, head_x, line_body, curses.color_pair(1))
 
     def draw_msg(self):  # 绘制线体相关信息，位于游戏区域下方
-        attrs = self.attrs
-        Game.tui.addstr(self.__map_h+5, 1, str(len(attrs['body_pos'])))
+        line = 1
+        for k, fx in self.effects.items():
+            trg_type = fx[0]  # 该触发点的类型
+            trg_style = Game.styles['triggers'][trg_type]  # 获得样式配置
+            Game.set_color(11, trg_style['color'])  # 用触发点的颜色来打印文字
+            remain = f' - {fx[1]}s' if fx[1] > 0 else ''
+            text = self.fx_dict[trg_type]+remain
+            Game.msg_area.addstr(line, 0, text, curses.color_pair(11))
+            line += 1
 
     def impact(self):  # 碰撞判断
         max_x, max_y = self.__map_w, self.__map_h  # 解构赋值最大的x,y坐标值
@@ -278,6 +306,13 @@ class Line:  # 初始化运动线
         vx, vy = self.attrs['velo']
         return vx+vy
 
+    @velo.setter
+    def velo(self, v):  # 设置线体速度大小（自动判断方向）
+        if v > 0 and v <= 1:  # 速度有效性校验
+            attrs = self.attrs
+            vx = attrs['velo'][0]
+            attrs['velo'] = (0, v) if vx == 0 else (v, 0)
+
 
 class Trigger:  # 触发点类
     def __init__(self, line_ins) -> None:
@@ -298,7 +333,9 @@ class Trigger:  # 触发点类
                     trg_type = tg['type']  # 获得触发点类型
                     # Game.add_score()  # 加分
                     del self.triggers[ind]
-                    asyncio.run(self.__trg_async(trg_type, (t_x, t_y)))
+                    new_task = asyncio.create_task(
+                        self.__trg_async(trg_type, (t_x, t_y)))
+                    Game.task_list.append(new_task)
                     # self.make()
                     # self.line.add_tail()
 
@@ -329,25 +366,23 @@ class Trigger:  # 触发点类
         for tg in self.triggers.values():
             trg_type = tg['type']  # 该触发点的类型
             trg_style = Game.styles['triggers'][trg_type]  # 获得样式配置
-            # 501号颜色用于触发点
-            curses.init_color(501, *Res.rgb(trg_style['color']))
-            curses.init_pair(10, 501, curses.COLOR_BLACK)  # 10号颜色对用于触发点
+            Game.set_color(10, trg_style['color'])  # 10号颜色对用于触发点
             x, y = tg['pos']
             Game.game_area.addstr(
                 y, x, trg_style['pattern'], curses.color_pair(10))
 
     async def __trg_async(self, trg_type, pos):  # 异步处理分发
-        trg_type='normal' # for test
+        trg_type = 'accelerate'  # for test
         trg_funcs = {
             'normal': self.__trg_normal,
             'bonus': self.__trg_bonus,
-            'accelerate': self.__trg_accelerate,
-            'decelerate': self.__trg_decelerate,
+            'accelerate': self.__trg_acce,
+            'decelerate': self.__trg_dece,
             'myopia': self.__trg_myopia,
             'bomb': self.__trg_bomb,
-            'invincibility': self.__trg_invincibility,
+            'invincibility': self.__trg_ivcb,
             'stones': self.__trg_stones,
-            'teleport': self.__trg_teleport
+            'teleport': self.__trg_tp
         }
         await trg_funcs[trg_type](pos)
 
@@ -358,10 +393,25 @@ class Trigger:  # 触发点类
     async def __trg_bonus(self, pos):
         Game.add_score()  # 只加分
 
-    async def __trg_accelerate(self, pos):
-        asyncio.run(self.__trg_async('accelerate'))
+    async def __trg_acce(self, pos):
+        last_for = 5  # 效果持续5秒
+        velo_add = 0.2  # 增加的速度
+        effects = self.line.effects
+        sub = time.time()  # 插入的下标
+        status = ['accelerate', last_for]
+        velo_before = self.line.velo  # 之前的速度
+        temp_velo = velo_before+velo_add  # 暂且而言的新速度
+        if temp_velo <= 1:  # 速度封顶
+            effects[sub] = status
+            self.line.velo = temp_velo  # 设置速度
+            for i in range(last_for):  # 持续last_for秒
+                status[1] -= 1
+                await asyncio.sleep(1)
+            current_speed = self.line.velo  # 因为是异步执行，速度可能已经改变了，再获取一次
+            self.line.velo = current_speed-velo_add  # 恢复速度
+            del effects[sub]  # 删除效果
 
-    async def __trg_decelerate(self, pos):
+    async def __trg_dece(self, pos):
         pass
 
     async def __trg_myopia(self, pos):
@@ -370,11 +420,11 @@ class Trigger:  # 触发点类
     async def __trg_bomb(self, pos):
         pass
 
-    async def __trg_invincibility(self, pos):
+    async def __trg_ivcb(self, pos):
         pass
 
     async def __trg_stones(self, pos):
         pass
 
-    async def __trg_teleport(self, pos):
+    async def __trg_tp(self, pos):
         pass

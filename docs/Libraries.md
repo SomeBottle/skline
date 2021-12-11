@@ -22,6 +22,7 @@ Curses在Windows平台的补丁包，使得在Windows上能使用Curses库.
 Python标准库，在Python3.4中加入，3.5进一步被完善。可用于并发执行代码，官方文档：
 
 * https://docs.python.org/zh-cn/3/library/asyncio.html  
+* https://docs.python.org/zh-cn/3/library/asyncio-task.html
 
 ## time  
 
