@@ -58,10 +58,18 @@ class MenuView(BasicView):  # 派生出一个显示界面的类
         task_list = set()
         game = Game(task_list)  # 向实例传入任务列表
         task_list.add(asyncio.create_task(game.start()))
+        self.task_list = task_list
         await asyncio.wait(task_list)
+        print('Concurrent tasks were completed.')
+        self.game_end_choice = game.end_choice  # 把游戏结束后的值传出去
 
     def start_game(self):  # 开始游戏
         asyncio.run(self.asyncio_game())
+        choice_dict = {
+            'restart': self.start_game,
+            'menu': self.menu
+        }
+        choice_dict[self.game_end_choice]()  # 执行选项
 
     def leave(self):
         print(base64.b64decode(Res.author()).decode("utf-8"))
@@ -83,10 +91,10 @@ class MenuView(BasicView):  # 派生出一个显示界面的类
             choice_session.addstr(1, 0, self.option_maker(current_choice))
             choice_session.refresh()  # 刷新选项窗口，输出上面的内容
             key_input = choice_session.getch()  # 检测用户输入的键
-            if key_input in (ord('w'), curses.KEY_UP):  # 如果用户按下的是上键，选项指针上调
+            if key_input in (ord('w'), ord('W'), curses.KEY_UP):  # 如果用户按下的是上键，选项指针上调
                 current_choice = (
                     current_choice-1) if current_choice > 0 else 0
-            elif key_input in (ord('s'), curses.KEY_DOWN):  # 如果用户按下的是下键，选项指针上调
+            elif key_input in (ord('s'), ord('S'), curses.KEY_DOWN):  # 如果用户按下的是下键，选项指针上调
                 current_choice = (
                     current_choice+1) if current_choice < self.last_choice else self.last_choice
             elif key_input in (10, curses.KEY_ENTER):  # 用户按下了回车，确认选择，跳出循环
@@ -119,10 +127,10 @@ class DifficultyView(BasicView):  # 困难度调整的会话
             choice_session.addstr(1, 0, self.bar_maker(difficulty_set))
             choice_session.refresh()  # 刷新选项窗口，输出上面的内容
             key_input = choice_session.getch()  # 检测用户输入的键
-            if key_input in (ord('a'), curses.KEY_LEFT):  # 用户按下了左键
+            if key_input in (ord('a'), ord('A'), curses.KEY_LEFT):  # 用户按下了左键
                 difficulty_set = (
                     difficulty_set-1) if difficulty_set > 1 else 1  # 减少困难度
-            elif key_input in (ord('d'), curses.KEY_RIGHT):  # 用户按下了右键
+            elif key_input in (ord('d'), ord('D'), curses.KEY_RIGHT):  # 用户按下了右键
                 difficulty_set = (
                     difficulty_set+1) if difficulty_set < self.max_difficulty else self.max_difficulty
             elif key_input in (10, curses.KEY_ENTER):  # 用户按下了回车，确认选择，跳出循环

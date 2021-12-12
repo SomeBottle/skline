@@ -9,8 +9,7 @@ from resource import Res
 
 class Game:
     def __init__(self, task_list) -> None:
-        self.cls_init(task_list)  # 重初始化类属性
-        self.task_list = task_list  # 传递并发任务列表
+        self.cls_init(task_list=task_list)  # 重初始化类属性
         curses.noecho()  # 无回显模式
         curses.start_color()  # 初始化颜色
         self.tui.nodelay(True)  # getch不阻塞
@@ -55,9 +54,9 @@ class Game:
         cls.all_cfg = all_cfg
         cls.game_cfg = game_cfg
         cls.map_size = map_size
-        cls.tick_interval = round(1/tps, 4)  # 算出tick间隔，保留四位小数
-        cls.task_list = task_list
+        cls.__tick_interval = round(1/tps, 4)  # 算出tick间隔，保留四位小数
         cls.__ins_list = {}  # 储存实例的列表
+        cls.__task_list = task_list
         cls.tui = curses.initscr()  # 初始化curses，生成tui界面
 
     @classmethod
@@ -67,6 +66,11 @@ class Game:
     @classmethod
     def reset_score(cls):  # 重置分数
         cls.__score = 0
+
+    @classmethod
+    def add_task(cls, coroutine):
+        new_task = asyncio.create_task(coroutine)
+        cls.__task_list.add(new_task)
 
     @classmethod
     def add_score(cls, num=1):  # 加分
@@ -90,7 +94,6 @@ class Game:
         msg_area = curses.newwin(7, map_w, map_h+1, 1)
         game_area.keypad(True)  # 支持上下左右等特殊按键
         game_area.nodelay(True)  # 非阻塞，用户没操作游戏要持续进行
-        msg_area.nodelay(True)
         cls.game_area = game_area
         cls.msg_area = msg_area
 
@@ -117,7 +120,7 @@ class Game:
         if not cls.short_sighted:  # 没有近视就默认情况
             win_obj.addstr(pos_y, pos_x, string, *args)
         else:  # 近视了就特殊打印
-            sight_w = 5  # 视野宽度
+            sight_w = 7  # 视野宽度
             sight_h = 5  # 视野高度
             map_w, map_h = cls.map_size  # 获得地图尺寸
             x_ratio = map_w//sight_w  # x方向比例
@@ -191,22 +194,35 @@ class Game:
         self.msg_area.addstr(0, 0, score_text+len_text)
 
     def over(self):  # 游戏结束
-        self.cancel_tasks()  # 取消所有任务
+        self.cancel_tasks()  # 清除并行任务
         self.tui.erase()  # 擦除内容
         self.game_area.erase()  # 擦除游戏区域内容
         over_text = Res().art_texts('gameover')[2]  # 获得艺术字GAME OVER
         self.tui.addstr(1, 5, Res.x_offset(
             over_text, 5), curses.color_pair(4))
+        self.msg_area.addstr(
+            0, 0, 'Type: \n(R) to Replay the Game\n(B) to Return to Menu')
         self.tui.refresh()
+        self.msg_area.refresh()
+        self.msg_area.nodelay(False)  # 阻塞接受getch
+        while True:
+            recv = self.msg_area.getch()
+            if recv in (ord('r'), ord('R')):  # 按下R/r
+                choice = 'restart'
+                break
+            elif recv in (ord('b'), ord('B')):  # 按下B/b
+                choice = 'menu'
+                break
         self.del_area()  # 删除游戏区域
-        time.sleep(5)
+        curses.endwin()
+        self.end_choice = choice  # 传值出去
 
     def cancel_tasks(self):  # 取消所有并行任务
-        for task in self.task_list:
+        for task in self.__task_list:
             task.cancel()
 
     async def start(self):  # 开始游戏！
-        tick_interval = self.tick_interval  # 获得tick间隔时间
+        tick_interval = self.__tick_interval  # 获得tick间隔时间
         self.count_down()  # 先调用倒计时
         self.reset_score()  # 重置分数
         self.create_area()  # 创建游戏绘制区域
@@ -263,7 +279,8 @@ class Line:  # 初始化运动线
             'myopia': False  # 是否近视
         }
         self.effects = {}  # 线身效果
-        self.fx_dict = {  # 效果对照表
+        self.fx_dict = {  # 效果提示对照表
+            'bonus': 'Got bonus! ',
             'accelerate': 'Speed UP',
             'decelerate': 'Speed Down',
             'myopia': 'Short-sighted! Watch out!',
@@ -363,10 +380,10 @@ class Line:  # 初始化运动线
         dx, dy = attrs['direction']  # 解构赋值x,y的方向
         recv = Game.game_area.getch()  # 获取用户操作
         ctrls = {
-            'L': (ord('a'), curses.KEY_LEFT),
-            'R': (ord('d'), curses.KEY_RIGHT),
-            'U': (ord('w'), curses.KEY_UP),
-            'D': (ord('s'), curses.KEY_DOWN)
+            'L': (ord('a'), ord('A'), curses.KEY_LEFT),
+            'R': (ord('d'), ord('D'), curses.KEY_RIGHT),
+            'U': (ord('w'), ord('W'), curses.KEY_UP),
+            'D': (ord('s'), ord('S'), curses.KEY_DOWN)
         }
         if recv in ctrls['L']+ctrls['R']:
             # 如果vx为0就调换一下两个速度，让速度沿x方向
@@ -413,7 +430,12 @@ class Trigger:  # 触发点类
 
     def check(self):  # 检查食物碰撞
         if len(self.triggers) == 0:  # 没有任何触发点
-            self.make()  # 生成触发点
+            map_w, map_h = Game.map_size
+            map_area = map_w*map_h  # 地图面积
+            max_trigger_num = floor(map_area/300)+1  # 一次生成的最多的触发点数量
+            trigger_num = random.randint(1, max_trigger_num)
+            for trg in range(trigger_num):
+                self.make()  # 生成触发点
         else:  # 有触发点就检测碰撞
             # 如果不这样做，在循环过程中对字典进行del操作时会有异常抛出
             trg_items = tuple(self.triggers.items())
@@ -423,15 +445,11 @@ class Trigger:  # 触发点类
                 # 判断水平方向碰撞
                 if self.line.hit(t_x, t_y):
                     trg_type = tg['type']  # 获得触发点类型
-                    # Game.add_score()  # 加分
                     del self.triggers[ind]
-                    new_task = asyncio.create_task(
-                        self.__trg_async(trg_type, (t_x, t_y)))
-                    Game.task_list.add(new_task)
-                    # self.make()
-                    # self.line.add_tail()
+                    # 创建异步协程任务
+                    Game.add_task(self.__trg_async(trg_type, (t_x, t_y)))
 
-    def ava_points(self):  # 获得可用的点
+    def ava_points(self, border_offset=False):  # 获得可用的点
         attrs = self.line.attrs  # 获得线体属性
         exist_points = []+attrs['body_pos']  # 脱离原来的引用
         exist_points.append(attrs['head_pos'])
@@ -440,7 +458,16 @@ class Trigger:  # 触发点类
         exist_points += exist_triggers  # exist_points储存的是已经使用的坐标点
         exist_points += Game.border_points  # 还要算入边框的点
         # 将所有的坐标点和已经使用的坐标点作差集，就是还可以选用的坐标点
-        return tuple(Game.map_points - set(exist_points))
+        usable_points = Game.map_points - set(exist_points)
+        # 如果不要靠近边界
+        if border_offset:
+            offset = 3
+            map_w, map_h = Game.map_size
+            ava_area = {(xi, yi) for xi in range(offset, map_w-offset-1)
+                        for yi in range(3, map_h-offset-1)}
+            # 利用交集得出可用的点
+            usable_points = usable_points & ava_area
+        return tuple(usable_points)
 
     def make(self):  # 做饭...啊不，是随机放置触发点的方法
         ava_points = self.ava_points()
@@ -495,12 +522,14 @@ class Trigger:  # 触发点类
 
     async def __trg_bonus(self, pos):
         Game.add_score()  # 只加分
+        status = ['bonus', 0]
+        await self.__hang_fx(status, True)
 
     async def __trg_acce(self, pos):
         self.line.add_tail()  # 增长尾巴
+        Game.add_score()  # 加分
         last_for = 5  # 效果持续5秒
         velo_add = 0.2  # 增加的速度
-        Game.add_score()  # 加分
         status = ['accelerate', last_for]
         velo_before = self.line.velo  # 之前的速度
         temp_velo = velo_before+velo_add  # 暂且而言的新速度
@@ -512,6 +541,7 @@ class Trigger:  # 触发点类
 
     async def __trg_dece(self, pos):
         self.line.add_tail()  # 增长尾巴
+        Game.add_score()  # 加分
         last_for = 5  # 效果持续5秒
         velo_rmv = 0.2  # 降低的速度
         status = ['decelerate', last_for]
@@ -624,7 +654,7 @@ class Trigger:  # 触发点类
     async def __trg_tp(self, pos):
         self.line.add_tail()  # 增长尾巴
         Game.add_score()  # 加分
-        ava_points = self.ava_points()  # 获得所有可用的点
+        ava_points = self.ava_points(True)  # 获得所有可用的点(偏移边界)
         attrs = self.line.attrs
         attrs['head_pos'] = random.choice(ava_points)  # 把头随机传送到一个地方
         status = ['teleport', 0]

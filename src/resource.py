@@ -15,46 +15,46 @@ class Res:
             'diff_cfg': {  # 不同困难度对应的配置
                 "1": {
                     "map_size": (50, 15),
-                    "init_velo": 0.2,  # 值得注意的是，速度最大值不能超过1格/tick，不然会绘制计算错误
+                    "init_velo": 0.4,  # 值得注意的是，速度最大值不能超过1格/tick，不然会绘制计算错误
                     "triggers": {  # 触发点的生成概率，支持小数点后三位
                         "normal": 0.5,
                         "bonus": 0.05,
                         "accelerate": 0.08,
                         "decelerate": 0.02,
-                        "myopia": 0.03,
-                        "bomb": 0.02,
+                        "myopia": 0.05,
+                        "bomb": 0.04,
                         "invincibility": 0.05,
-                        "stones": 0.1,
+                        "stones": 0.06,
                         "teleport": 0.15
                     }
                 },
                 "2": {
                     "map_size": (50, 15),
-                    "init_velo": 0.3,
+                    "init_velo": 0.5,
                     "triggers": {
                         "normal": 0.4,
                         "bonus": 0.05,
-                        "accelerate": 0.1,
+                        "accelerate": 0.09,
                         "decelerate": 0.02,
-                        "myopia": 0.01,
-                        "bomb": 0.02,
+                        "myopia": 0.09,
+                        "bomb": 0.09,
                         "invincibility": 0.05,
-                        "stones": 0.21,
+                        "stones": 0.07,
                         "teleport": 0.14
                     }
                 },
                 "3": {
                     "map_size": (40, 10),
-                    "init_velo": 0.4,
+                    "init_velo": 0.3,
                     "triggers": {
                         "normal": 0.3,
                         "bonus": 0.05,
                         "accelerate": 0.2,
                         "decelerate": 0.02,
-                        "myopia": 0.05,
-                        "bomb": 0.03,
+                        "myopia": 0.09,
+                        "bomb": 0.10,
                         "invincibility": 0.05,
-                        "stones": 0.2,
+                        "stones": 0.09,
                         "teleport": 0.1
                     }
                 },
@@ -64,10 +64,10 @@ class Res:
                     "triggers": {
                         "normal": 0.25,
                         "bonus": 0.05,
-                        "accelerate": 0.2,
+                        "accelerate": 0.12,
                         "decelerate": 0.02,
                         "myopia": 0.1,
-                        "bomb": 0.03,
+                        "bomb": 0.11,
                         "invincibility": 0.05,
                         "stones": 0.2,
                         "teleport": 0.1
@@ -77,15 +77,15 @@ class Res:
                     "map_size": (30, 10),
                     "init_velo": 0.5,
                     "triggers": {
-                        "normal": 0.15,
+                        "normal": 0.25,
                         "bonus": 0.03,
-                        "accelerate": 0.22,
+                        "accelerate": 0.10,
                         "decelerate": 0.02,
                         "myopia": 0.13,
                         "bomb": 0.15,
-                        "invincibility": 0.03,
-                        "stones": 0.21,
-                        "teleport": 0.06
+                        "invincibility": 0.07,
+                        "stones": 0.15,
+                        "teleport": 0.1
                     }
                 }
             },

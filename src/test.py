@@ -5,7 +5,7 @@ import os
 a=Figlet()
 '''with open(os.path.dirname(__file__)+'/texts/gameover.txt', 'w') as file_object:
     file_object.write(a.renderText('GAME OVER'))'''
-
+'''
 async def test():
     await asyncio.sleep(2)
     print('Finished waiting')
@@ -22,4 +22,12 @@ async def enter():
     await asyncio.wait(task)
     
 
-asyncio.run(enter())
+asyncio.run(enter())'''
+class Test:
+    def __init__(self,h) -> None:
+        self.hello=h
+    def delete(self):
+        del self
+test=Test('world')
+test.delete()
+print(test)
