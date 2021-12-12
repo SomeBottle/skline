@@ -104,43 +104,43 @@ class Res:
                 "explode": "*",  # 爆炸粒子图案
                 "explode_color": (255, 215, 15),
                 "flow_stone": "o",  # 流石图案
-                "flow_stone_color": (209, 153, 0),
+                "flow_stone_color": (199, 192, 173),
                 "triggers": {  # 触发点配置
                     "normal": {  # 涨分并增长线体
                         "pattern": "@",
                         "color": (255, 149, 0)
                     },
                     "bonus": {  # 只涨分的触发点
-                        "pattern": "@",
-                        "color": (255, 149, 0)
+                        "pattern": "+",
+                        "color": (0, 224, 209)
                     },
                     "accelerate": {  # 加速的触发点
-                        "pattern": "@",
-                        "color": (255, 149, 0)
+                        "pattern": "+",
+                        "color": (0, 235, 164)
                     },
                     "decelerate": {  # 减速的触发点
-                        "pattern": "@",
-                        "color": (255, 149, 0)
+                        "pattern": "+",
+                        "color": (0, 235, 164)
                     },
                     "myopia": {  # 近视触发点（视野缩小）
-                        "pattern": "@",
-                        "color": (255, 149, 0)
+                        "pattern": "*",
+                        "color": (16, 235, 0)
                     },
                     "bomb": {  # 炸弹点
-                        "pattern": "@",
-                        "color": (255, 149, 0)
+                        "pattern": "*",
+                        "color": (251, 255, 0)
                     },
                     "invincibility": {  # 无敌点
-                        "pattern": "@",
-                        "color": (255, 149, 0)
+                        "pattern": "$",
+                        "color": (255, 136, 0)
                     },
                     "stones": {  # 流石点
                         "pattern": "@",
                         "color": (255, 149, 0)
                     },
                     "teleport": {  # 传送点
-                        "pattern": "@",
-                        "color": (255, 149, 0)
+                        "pattern": "$",
+                        "color": (216, 245, 0)
                     }
 
                 }

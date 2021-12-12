@@ -321,12 +321,13 @@ class Line:  # 初始化运动线
     def draw_msg(self):  # 绘制线体相关信息，位于游戏区域下方
         line = 1
         for fx in self.effects.values():
+            color_num = line+40  # 41号往后用于消息颜色
             trg_type = fx[0]  # 该触发点的类型
             trg_style = Game.styles['triggers'][trg_type]  # 获得样式配置
-            Game.set_color(11, trg_style['color'])  # 用触发点的颜色来打印文字
+            Game.set_color(color_num, trg_style['color'])  # 用触发点的颜色来打印文字
             remain = f' - {fx[1]}s' if fx[1] > 0 else ''
             text = self.fx_dict[trg_type]+remain
-            Game.msg_area.addstr(line, 0, text, curses.color_pair(11))
+            Game.msg_area.addstr(line, 0, text, curses.color_pair(color_num))
             line += 1
 
     def tail_impact(self, points):  # 削尾巴判断
@@ -500,12 +501,15 @@ class Trigger:  # 触发点类
         self.triggers[sub] = new_point  # 储存创建的新触发点
 
     def draw(self):  # 输出触发点和相关信息
-        for tg in self.triggers.values():
+        trg_num = len(self.triggers)
+        for key, tg in self.triggers.items():
             trg_type = tg['type']  # 该触发点的类型
             trg_style = Game.styles['triggers'][trg_type]  # 获得样式配置
-            Game.set_color(10, trg_style['color'])  # 10号颜色对用于触发点
+            color_num = key+30
+            Game.set_color(color_num, trg_style['color'])  # 30号往后颜色对用于触发点
             x, y = tg['pos']
-            Game.printer(y, x, trg_style['pattern'], curses.color_pair(10))
+            Game.printer(y, x, trg_style['pattern'],
+                         curses.color_pair(color_num))
 
     async def __trg_async(self, trg_type, pos):  # 异步处理分发
         trg_funcs = {
