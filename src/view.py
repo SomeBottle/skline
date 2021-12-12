@@ -24,8 +24,8 @@ class BasicView:  # 基类
         title.addstr(1, 3, Res.x_offset(title_txt[2], 3))  # 打印出游戏名
         title.border()  # 标题旁边加个边框
         # 再创建一个窗口，我们作为菜单
-        # 高为 3 宽为 title_offset_w，在命令行窗口的 title_offset_h+2行2列
-        choice_session = curses.newwin(5, title_offset_w, title_offset_h+2, 2)
+        # 高为 8 宽为 title_offset_w，在命令行窗口的 title_offset_h+2行2列
+        choice_session = curses.newwin(10, title_offset_w, title_offset_h+2, 2)
         choice_session.nodelay(False)  # 阻塞
         choice_session.keypad(True)  # 支持上下左右这种特殊按键
         return (title, choice_session)
@@ -37,12 +37,14 @@ class MenuView(BasicView):  # 派生出一个显示界面的类
         self.choice_dict = {  # 几个选项
             0: 'Start to line',
             1: 'Set Difficulty',
-            2: 'Exit'
+            2: 'Ranking',
+            3: 'Exit'
         }
         self.choice_func = {  # 上述选项对应的函数
             0: self.start_game,
             1: DifficultyView().show_panel,
-            2: self.leave
+            2: RankingView().show_panel,
+            3: self.leave
         }
         self.last_choice = len(self.choice_dict.keys())-1  # 最后一个选项的索引，用来封底
 
@@ -64,7 +66,7 @@ class MenuView(BasicView):  # 派生出一个显示界面的类
         self.game_end_choice = game.end_choice  # 把游戏结束后的值传出去
 
     def start_game(self):  # 开始游戏
-        asyncio.run(self.asyncio_game())
+        asyncio.run(self.asyncio_game())  # 开启事件循环
         choice_dict = {
             'restart': self.start_game,
             'menu': self.menu
@@ -139,4 +141,49 @@ class DifficultyView(BasicView):  # 困难度调整的会话
         self.tui.clear()  # 清除屏幕
         curses.endwin()  # 中止窗口，取消初始化
         res_ins.set_config('difficulty', difficulty_set)
+        MenuView().menu()  # 返回主菜单
+
+
+class RankingView(BasicView):
+    def list_maker(self, chunk, start=0):
+        list_str = 'PLACE             DATE             SCORE\n'
+        for key, item in enumerate(chunk):
+            place = start+key+1
+            date, score = item
+            list_str += f'{place}        {date}        {score}\n'
+        list_str += '\nPress (D) for Next Page, (A) for Prev Page'
+        return list_str
+
+    def show_panel(self):
+        rank_list = Res().get_ranking()['rank_list']
+        title, choice_session = self.create_win(Res().art_texts('ranking'))
+        chunked = []
+        each_chunk = 6
+        for i in range(0, len(rank_list), each_chunk):
+            the_chunk = rank_list[i:i+each_chunk]
+            chunked.append(the_chunk)  # 分片
+        self.tui.refresh()  # 刷新总界面
+        title.refresh()  # 刷新标题窗口
+        current_page = 0
+        max_page = len(chunked)-1
+        while True:
+            choice_session.erase()  # 清除之前的显示
+            if len(rank_list) > 0:
+                current_chunk = chunked[current_page]
+                start_place = current_page*each_chunk
+                choice_session.addstr(
+                    1, 0, self.list_maker(current_chunk, start_place))
+            else:  # 暂无记录
+                choice_session.addstr(1, 1, 'NO RECORDS')
+            choice_session.refresh()  # 刷新选项窗口，输出上面的内容
+            recv = choice_session.getch()
+            if recv in (ord('D'), ord('d')) and current_page < max_page:
+                current_page += 1
+            elif recv in (ord('A'), ord('a')) and current_page > 0:
+                current_page -= 1
+            elif recv in (10, curses.KEY_ENTER):
+                break
+        del title, choice_session  # 删除窗口
+        self.tui.clear()  # 清除屏幕
+        curses.endwin()  # 中止窗口，取消初始化
         MenuView().menu()  # 返回主菜单

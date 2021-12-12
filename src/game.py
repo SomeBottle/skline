@@ -91,7 +91,7 @@ class Game:
         map_w, map_h = map(lambda x: x+3, cls.map_size)  # 获得地图大小
         # 根据地图大小创建游戏区域，要比地图大小稍微大一点
         game_area = curses.newwin(map_h, map_w, 1, 1)
-        msg_area = curses.newwin(7, map_w, map_h+1, 1)
+        msg_area = curses.newwin(8, map_w, map_h+1, 1)
         game_area.keypad(True)  # 支持上下左右等特殊按键
         game_area.nodelay(True)  # 非阻塞，用户没操作游戏要持续进行
         cls.game_area = game_area
@@ -190,21 +190,39 @@ class Game:
     def draw_score(self):
         line_ins = self.get_ins('line')
         score_text = f'SCORE: {self.__score} '
-        len_text = f'LENGTH: {len(line_ins.attrs["body_pos"])}'
-        self.msg_area.addstr(0, 0, score_text+len_text)
+        len_text = f'TAIL LEN: {len(line_ins.attrs["body_pos"])}'
+        self.msg_area.addstr(0, 0, score_text+' / '+len_text)
+
+    def calc_score(self):  # 计算出最终得分，返回(分数,长度,总得分)
+        difficulty = self.all_cfg['difficulty']*0.1
+        line_ins = self.get_ins('line')
+        body_len = len(line_ins.attrs['body_pos'])  # 尾巴长度
+        score = self.__score
+        multiply = score*body_len*difficulty
+        return (score, body_len, round(multiply, 2))
 
     def over(self):  # 游戏结束
+        res_ins = Res()
         self.cancel_tasks()  # 清除并行任务
         self.tui.erase()  # 擦除内容
         self.game_area.erase()  # 擦除游戏区域内容
-        over_text = Res().art_texts('gameover')[2]  # 获得艺术字GAME OVER
-        self.tui.addstr(1, 5, Res.x_offset(
-            over_text, 5), curses.color_pair(4))
+        text_h, text_w, over_text = res_ins.art_texts(
+            'gameover')  # 获得艺术字GAME OVER
+        self.tui.addstr(1, 1, Res.x_offset(
+            over_text, 1), curses.color_pair(4))
+        self.msg_area.mvwin(text_h+1, 1)  # 移动一下msg区的位置
+        pattern = '{:-^' + str(text_w) + '}'
+        result_text = pattern.format('RESULT')
+        score, tail_len, total = map(str, self.calc_score())
+        score_text = 'SCORE: ' + score+'\nTAIL LENGTH: '+tail_len+'\nTOTAL SCORE: '+total
+        self.msg_area.addstr(0, 0, result_text)
+        self.msg_area.addstr(1, 0, score_text)
         self.msg_area.addstr(
-            0, 0, 'Type: \n(R) to Replay the Game\n(B) to Return to Menu')
+            5, 0, 'Type: \n(R) to Replay the Game\n(B) to Return to Menu')
         self.tui.refresh()
         self.msg_area.refresh()
         self.msg_area.nodelay(False)  # 阻塞接受getch
+        res_ins.set_ranking(total)  # 尝试计入排名
         while True:
             recv = self.msg_area.getch()
             if recv in (ord('r'), ord('R')):  # 按下R/r

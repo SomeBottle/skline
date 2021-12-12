@@ -2,6 +2,7 @@
 from os import path
 from math import floor
 import random
+import time
 import json
 
 
@@ -9,9 +10,11 @@ class Res:
     def __init__(self) -> None:
         self.f_path = path.dirname(__file__)  # 当前程序运行所在的绝对目录
         config_path = self.f_path+'/config.json'
+        ranking_path = self.f_path+'/ranking.json'
         default_config = {  # 默认配置文件
             'difficulty': 1,
             'tps': 10,  # ticks per second
+            'max_rank_len': 100,  # 排名最多收录多少条
             'diff_cfg': {  # 不同困难度对应的配置
                 "1": {
                     "map_size": (50, 15),
@@ -143,9 +146,16 @@ class Res:
                 }
             }
         }
+        default_ranking = {
+            "rank_list": []
+        }
+
         if not path.exists(config_path):  # 如果没有就自动创建配置文件
             with open(config_path, 'w+') as f:
                 f.write(json.dumps(default_config, indent=2))
+        if not path.exists(ranking_path):  # 如果没有就自动创建排名
+            with open(ranking_path, 'w+') as f:
+                f.write(json.dumps(default_ranking))
 
     def art_texts(self, k):  # 获取艺术字，返回值(高度，长度，艺术字文本)，艺术字都放在了./texts目录下
         file_path = self.f_path+'/texts/'+k+'.txt'
@@ -153,8 +163,8 @@ class Res:
             with open(file_path, 'r') as f:
                 lines = f.readlines()
                 text_height = len(lines)  # 以行数为高度
-                text_width = max(*map(lambda x: len(x), lines)
-                                 )  # 以最长的一行文本的长度为宽度
+                # 以最长的一行文本的长度为宽度
+                text_width = max(*map(lambda x: len(x), lines))
                 f.seek(0, 0)  # readlines后文件指针指向末尾了，要拉回来！这是一个非常容易出错的点！
                 result = (text_height, text_width, f.read())
             return result  # 让with as语句块执行完后再返回
@@ -174,6 +184,30 @@ class Res:
         pre_cfg[key] = val
         with open(file_path, 'w+') as f:
             f.write(json.dumps(pre_cfg, indent=2))  # 写入修改后的配置
+        return True
+
+    def get_ranking(self):  # 获得排名
+        file_path = self.f_path+'/ranking.json'
+        with open(file_path, 'r') as f:
+            get_dict = json.loads(f.read())
+        return get_dict
+
+    def set_ranking(self, total_score):  # 加入排名
+        file_path = self.f_path+'/ranking.json'
+        config = self.get_config()
+        pre_ranking = self.get_ranking()
+        rank_list = pre_ranking['rank_list']
+        current_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+        if len(rank_list) > config['max_rank_len']:  # 超出排名收录的数量了
+            last_one = rank_list[-1]  # 找到当前排名最后的
+            if total_score > last_one[1]:
+                rank_list.pop()
+                rank_list.append((current_time, total_score))
+        else:
+            rank_list.append((current_time, total_score))
+        rank_list.sort(key=lambda x: x[1], reverse=True)
+        with open(file_path, 'w+') as f:
+            f.write(json.dumps(pre_ranking))  # 写入排名
         return True
 
     @staticmethod  # 作为一个静态方法
