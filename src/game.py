@@ -18,15 +18,12 @@ class Game:
         line_head_color = styles['line_head_color']
         line_body_color = styles['line_body_color']
         border_color = styles['border_color']
-        text_color = styles['text_color']  # 文字颜色
         # 一号颜色对，用于线头
         self.set_color(1, line_head_color)
         # 二号颜色对，用于边框颜色
         self.set_color(2, border_color)
         # 三号颜色对，用于线尾
         self.set_color(3, line_body_color)
-        # 四号颜色对，用于文字
-        self.set_color(4, text_color)
 
     @staticmethod
     def set_color(num, rgb_tuple):
@@ -208,8 +205,7 @@ class Game:
         self.game_area.erase()  # 擦除游戏区域内容
         text_h, text_w, over_text = res_ins.art_texts(
             'gameover')  # 获得艺术字GAME OVER
-        self.tui.addstr(1, 1, Res.x_offset(
-            over_text, 1), curses.color_pair(4))
+        self.tui.addstr(1, 1, Res.x_offset(over_text, 1))
         self.msg_area.mvwin(text_h+1, 1)  # 移动一下msg区的位置
         pattern = '{:-^' + str(text_w) + '}'
         result_text = pattern.format('RESULT')

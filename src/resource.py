@@ -98,7 +98,6 @@ class Res:
                 "line_body_color": (138, 220, 255),
                 'area_border': '#',
                 "border_color": (161, 161, 161),
-                "text_color": (255, 255, 255),
                 "to_explode": "*",  # 即将爆炸的图案
                 "to_explode_color": (255, 0, 0),  # 即将爆炸时闪烁的颜色
                 "explode": "*",  # 爆炸粒子图案
