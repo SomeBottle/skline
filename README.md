@@ -37,7 +37,7 @@ TUI游戏，一条像贪吃蛇的线。
         pip install windows-curses
         ```
 
-    4. 运行 ```main.py```  
+    4. 执行 ```python main.py```  
 
 <a id='exec_method2'></a>
 
@@ -76,5 +76,25 @@ TUI游戏，一条像贪吃蛇的线。
 
 ![drag to cmd](https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/pics/drag_to_cmd.gif)  
 
+------
+
+## 游戏机制-触发点
+* 触发点与得分
+
+* 触发点与效果
+
+To be updated~
+
+## 游戏机制-局终判定
+
+To be updated~
+
+## 游戏机制-分数计算  
+
+To be updated~
+
+------
+
+## 为什么界面是英文
 
 To be updated~  
