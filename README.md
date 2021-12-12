@@ -39,11 +39,13 @@ TUI游戏，一条像贪吃蛇的线。
 
     4. 运行 ```main.py```  
 
+<a id='exec_method2'></a>
+
 * 方法二（仅限Windows）
 
     1. 下载[```Releases```](https://github.com/SomeBottle/skline/releases/latest)里附件的压缩包。  
 
-    2. 解压到**目录**后运行```app.exe```。  
+    2. 解压到**目录**后**双击**```app.exe```运行程序。  
 
 ## 运行时可能出现的问题
 1. 运行即报错:  
@@ -68,9 +70,11 @@ TUI游戏，一条像贪吃蛇的线。
 
     很有可能是终端屏幕小了，拉大就行。我在某个远程win7计算机上测试时发现**CMD窗口**竟然无法鼠标拖拉调整，怎么办呢？  
 
-    
+    ![change the size](https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/pics/win_size_of_cmd.gif)  
 
+如果按[方法二](#exec_method2)运行程序，抛出异常时可能会直接**闪退**。为了看到异常，你可以选择把```app.exe```**拖拽**到```命令提示符```或者```PowerShell```里然后执行：  
 
-## 平台测试
+![drag to cmd](https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/pics/drag_to_cmd.gif)  
+
 
 To be updated~  
