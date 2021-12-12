@@ -15,6 +15,7 @@ class Res:
             'difficulty': 1,
             'tps': 10,  # ticks per second
             'max_rank_len': 100,  # 排名最多收录多少条
+            'use_color': True,  # 是否使用颜色，有的设备需要用到这个选项
             'diff_cfg': {  # 不同困难度对应的配置
                 "1": {
                     "map_size": (50, 15),

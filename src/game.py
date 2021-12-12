@@ -11,34 +11,46 @@ class Game:
     def __init__(self, task_list) -> None:
         self.cls_init(task_list=task_list)  # 重初始化类属性
         curses.noecho()  # 无回显模式
-        curses.start_color()  # 初始化颜色
         self.tui.nodelay(True)  # getch不阻塞
         self.tui.keypad(True)  # 支持特殊按键
         styles = self.styles
         line_head_color = styles['line_head_color']
         line_body_color = styles['line_body_color']
         border_color = styles['border_color']
-        # 一号颜色对，用于线头
-        self.set_color(1, line_head_color)
-        # 二号颜色对，用于边框颜色
-        self.set_color(2, border_color)
-        # 三号颜色对，用于线尾
-        self.set_color(3, line_body_color)
+        if self.__has_color:  # 如果能显示颜色就初始化颜色
+            curses.start_color()  # 初始化颜色
+            # 一号颜色对，用于线头
+            self.set_color(1, line_head_color)
+            # 二号颜色对，用于边框颜色
+            self.set_color(2, border_color)
+            # 三号颜色对，用于线尾
+            self.set_color(3, line_body_color)
 
-    @staticmethod
-    def set_color(num, rgb_tuple):
-        color_num = num+100
-        curses.init_color(color_num, *Res.rgb(rgb_tuple))
-        curses.init_pair(num, color_num, curses.COLOR_BLACK)
+    @classmethod
+    def set_color(cls, num, rgb_tuple):
+        if cls.__has_color:  # 前提要支持颜色
+            color_num = num+100
+            curses.init_color(color_num, *Res.rgb(rgb_tuple))
+            curses.init_pair(num, color_num, curses.COLOR_BLACK)
+
+    # 一个在color_pair之上的小Hook，防止不支持颜色
+    @classmethod
+    def color_pair(cls, pair_num):
+        if cls.__has_color:
+            return curses.color_pair(pair_num)
+        else:
+            return False
 
     # 初始化类属性，这样写是为了每次实例化Game()时都对应更新类属性
     # 为什么要全写成类属性呢，这是为了开放公共属性供Line,Trigger类实例使用，便于管理
+
     @classmethod
     def cls_init(cls, task_list):
         all_cfg = Res().get_config()  # 获得游戏配置文件
         difficulty = str(all_cfg['difficulty'])  # json中数字键名都会转换为字符串
         game_cfg = all_cfg['diff_cfg'][difficulty]  # 读取对应困难度的游戏配置
         tps = all_cfg['tps']  # 获得游戏tps
+        use_color = all_cfg['use_color']
         map_size = game_cfg['map_size']
         x, y = map_size
         # 根据地图大小生成所有的坐标
@@ -51,6 +63,7 @@ class Game:
         cls.all_cfg = all_cfg
         cls.game_cfg = game_cfg
         cls.map_size = map_size
+        cls.__has_color = curses.has_colors() and use_color  # 判断终端是否能使用颜色
         cls.__tick_interval = round(1/tps, 4)  # 算出tick间隔，保留四位小数
         cls.__ins_list = {}  # 储存实例的列表
         cls.__task_list = task_list
@@ -176,13 +189,13 @@ class Game:
         self.set_color(22, flow_stone_color)  # 22号颜色对用于流石
         for pt in self.flow_stones:
             x, y = pt
-            self.printer(y, x, flow_stone, curses.color_pair(22))
+            self.printer(y, x, flow_stone, self.color_pair(22))
 
     def draw_border(self):  # 根据边界点坐标绘制游戏区域边框
         pattern = self.styles['area_border']  # 读取边框样式
         for point in self.border_points:
             x, y = point
-            self.printer(y, x, pattern, curses.color_pair(2))
+            self.printer(y, x, pattern, self.color_pair(2))
 
     def draw_score(self):
         line_ins = self.get_ins('line')
@@ -210,6 +223,7 @@ class Game:
         pattern = '{:-^' + str(text_w) + '}'
         result_text = pattern.format('RESULT')
         score, tail_len, total = map(str, self.calc_score())
+        total_score = float(total)  # 总成绩
         score_text = 'SCORE: ' + score+'\nTAIL LENGTH: '+tail_len+'\nTOTAL SCORE: '+total
         self.msg_area.addstr(0, 0, result_text)
         self.msg_area.addstr(1, 0, score_text)
@@ -218,7 +232,7 @@ class Game:
         self.tui.refresh()
         self.msg_area.refresh()
         self.msg_area.nodelay(False)  # 阻塞接受getch
-        res_ins.set_ranking(total)  # 尝试计入排名
+        res_ins.set_ranking(total_score)  # 尝试计入排名
         while True:
             recv = self.msg_area.getch()
             if recv in (ord('r'), ord('R')):  # 按下R/r
@@ -310,9 +324,9 @@ class Line:  # 初始化运动线
         head_x, head_y = map(floor, head_pos)  # 解构赋值
         line_body = Game.styles['line']
         for t in body_pos:  # 绘制尾部
-            Game.printer(t[1], t[0], line_body, curses.color_pair(3))
+            Game.printer(t[1], t[0], line_body, Game.color_pair(3))
         # 使用1号颜色对进行头部绘制
-        Game.printer(head_y, head_x, line_body, curses.color_pair(1))
+        Game.printer(head_y, head_x, line_body, Game.color_pair(1))
 
     def draw_msg(self):  # 绘制线体相关信息，位于游戏区域下方
         line = 1
@@ -323,7 +337,7 @@ class Line:  # 初始化运动线
             Game.set_color(color_num, trg_style['color'])  # 用触发点的颜色来打印文字
             remain = f' - {fx[1]}s' if fx[1] > 0 else ''
             text = self.fx_dict[trg_type]+remain
-            Game.msg_area.addstr(line, 0, text, curses.color_pair(color_num))
+            Game.msg_area.addstr(line, 0, text, Game.color_pair(color_num))
             line += 1
 
     def tail_impact(self, points):  # 削尾巴判断
@@ -505,7 +519,7 @@ class Trigger:  # 触发点类
             Game.set_color(color_num, trg_style['color'])  # 30号往后颜色对用于触发点
             x, y = tg['pos']
             Game.printer(y, x, trg_style['pattern'],
-                         curses.color_pair(color_num))
+                         Game.color_pair(color_num))
 
     async def __trg_async(self, trg_type, pos):  # 异步处理分发
         trg_funcs = {
@@ -596,7 +610,7 @@ class Trigger:  # 触发点类
         x, y = pos
         for i in range(15):  # 爆炸前闪烁1.5秒
             if i % 2 == 0:
-                Game.printer(y, x, to_explode, curses.color_pair(20))
+                Game.printer(y, x, to_explode, Game.color_pair(20))
                 Game.game_area.refresh()
             await asyncio.sleep(0.1)
         # 生成器表达式随机生成爆炸的宽度和高度
@@ -615,7 +629,7 @@ class Trigger:  # 触发点类
             particles_num = random.randrange(3, (explosion_w*explosion_h)//2)
             particles = random.sample(explode_points, particles_num)
             for px, py in particles:
-                Game.printer(py, px, explode, curses.color_pair(21))
+                Game.printer(py, px, explode, Game.color_pair(21))
             Game.game_area.refresh()
             await asyncio.sleep(0.1)
         Game.explode_points.clear()  # 清空爆炸碰撞点

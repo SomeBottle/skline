@@ -1,7 +1,9 @@
 from pyfiglet import Figlet
 import time
 import asyncio
-import os
-a=Figlet()
-with open(os.path.dirname(__file__)+'/texts/ranking.txt', 'w') as file_object:
-    file_object.write(a.renderText('R A N K I N G'))
+import curses
+test=curses.initscr()
+curses.start_color()
+test.addstr(0,0,'hello',True)
+test.refresh()
+test.getch()

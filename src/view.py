@@ -146,7 +146,7 @@ class DifficultyView(BasicView):  # 困难度调整的会话
 
 class RankingView(BasicView):
     def list_maker(self, chunk, start=0):
-        list_str = 'PLACE             DATE             SCORE\n'
+        list_str = 'PLACE             TIME             SCORE\n'
         for key, item in enumerate(chunk):
             place = start+key+1
             date, score = item
