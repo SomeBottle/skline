@@ -344,10 +344,12 @@ class Line:  # 初始化运动线
         attrs = self.attrs
         bodies = attrs['body_pos']
         cut_from = 0  # 从哪里截断
+        found = False  # 防止没找到但仍把最后一节尾巴截掉了
         for k, v in enumerate(bodies):
             if v in points:
+                found = True
                 cut_from = k  # 从靠头部最近的地方截断
-        attrs['body_pos'] = bodies[cut_from+1::]
+        attrs['body_pos'] = bodies[cut_from+1::] if found else bodies
 
     def impact(self):  # 碰撞判断
         attrs = self.attrs
@@ -454,8 +456,8 @@ class Line:  # 初始化运动线
 
 class Trigger:  # 触发点类
     def __init__(self) -> None:
-        self.line = Game.get_ins('line')  # 传递line实例
         self.triggers = {}  # 用一个字典来储存触发点
+        self.__line = Game.get_ins('line')  # 传递line实例
 
     def check(self):  # 检查食物碰撞
         if len(self.triggers) == 0:  # 没有任何触发点
@@ -463,7 +465,7 @@ class Trigger:  # 触发点类
             map_area = map_w*map_h  # 地图面积
             max_trigger_num = floor(map_area/300)+1  # 一次生成的最多的触发点数量
             trigger_num = random.randint(1, max_trigger_num)
-            for trg in range(trigger_num):
+            for i in range(trigger_num):
                 self.make()  # 生成触发点
         else:  # 有触发点就检测碰撞
             # 如果不这样做，在循环过程中对字典进行del操作时会有异常抛出
@@ -472,14 +474,14 @@ class Trigger:  # 触发点类
                 t_x, t_y = tg['pos']  # 获得触发点坐标
                 # 两坐标相减，如果绝对值<1(格)，就说明在同一块区域，碰撞上了
                 # 判断水平方向碰撞
-                if self.line.hit(t_x, t_y):
+                if self.__line.hit(t_x, t_y):
                     trg_type = tg['type']  # 获得触发点类型
                     del self.triggers[ind]
                     # 创建异步协程任务
                     Game.add_task(self.__trg_async(trg_type, (t_x, t_y)))
 
     def ava_points(self, border_offset=False):  # 获得可用的点
-        attrs = self.line.attrs  # 获得线体属性
+        attrs = self.__line.attrs  # 获得线体属性
         exist_points = []+attrs['body_pos']  # 脱离原来的引用
         exist_points.append(attrs['head_pos'])
         exist_triggers = [i['pos']
@@ -511,7 +513,6 @@ class Trigger:  # 触发点类
         self.triggers[sub] = new_point  # 储存创建的新触发点
 
     def draw(self):  # 输出触发点和相关信息
-        trg_num = len(self.triggers)
         for key, tg in self.triggers.items():
             trg_type = tg['type']  # 该触发点的类型
             trg_style = Game.styles['triggers'][trg_type]  # 获得样式配置
@@ -521,23 +522,34 @@ class Trigger:  # 触发点类
             Game.printer(y, x, trg_style['pattern'],
                          Game.color_pair(color_num))
 
-    async def __trg_async(self, trg_type, pos):  # 异步处理分发
-        last_for_cfg = Game.game_cfg['triggers']['last_for']  # 获得持续时间配置
+    async def __trg_async(self, trg_type, pos):  # 触发点异步处理分发
         trg_funcs = {
-            'normal': self.__trg_normal,
-            'bonus': self.__trg_bonus,
-            'accelerate': self.__trg_acce,
-            'decelerate': self.__trg_dece,
-            'myopia': self.__trg_myopia,
-            'bomb': self.__trg_bomb,
-            'invincibility': self.__trg_ivcb,
-            'stones': self.__trg_stones,
-            'teleport': self.__trg_tp
+            'normal': FxNormal,
+            'bonus': FxBonus,
+            'accelerate': FxAclrt,
+            'decelerate': FxDclrt,
+            'myopia': FxMyopia,
+            'bomb': FxBomb,
+            'invincibility': FxIvcb,
+            'stones': FxStones,
+            'teleport': FxTlpt
         }
-        await trg_funcs[trg_type](trg_type, pos, last_for_cfg)
+        # 应用效果，传递(触发点种类,位置,Trigger实例)
+        await trg_funcs[trg_type](trg_type, pos, self).apply()
+
+# 以下是触发点效果类
+
+
+class FxBase:  # 效果基类
+    def __init__(self, trg_type, pos, trigger_ins) -> None:
+        self.last_for_cfg = Game.game_cfg['triggers']['last_for']
+        self.line = Game.get_ins('line')  # 传递line实例
+        self.ava_points = trigger_ins.ava_points  # 传递可用点方法
+        self.trg_type = trg_type
+        self.pos = pos
 
     # 挂起效果(status,是否只弹一下,在循环里执行的额外函数，用于额外函数的参数)
-    async def __hang_fx(self, status, pop=False, extra_func=False, *args):
+    async def hang_fx(self, status, pop=False, extra_func=False, *args):
         effects = self.line.effects
         sub = time.time()  # 插入的下标
         effects[sub] = status
@@ -549,20 +561,25 @@ class Trigger:  # 触发点类
             await asyncio.sleep(1)
         del effects[sub]  # 删除效果
 
-    async def __trg_normal(self, *args):
-        # name,pos,last_for_cfg=args
-        name = 'normal'
+
+class FxNormal(FxBase):  # 普通触发点效果
+    async def apply(self):  # 应用效果
         self.line.add_tail()  # 增长尾巴
         Game.add_score()  # 加分
 
-    async def __trg_bonus(self, *args):
-        name, pos, last_for_cfg = args
-        Game.add_score()  # 只加分
-        status = [name, 0]
-        await self.__hang_fx(status, True)
 
-    async def __trg_acce(self, *args):
-        name, pos, last_for_cfg = args
+class FxBonus(FxBase):  # 得分点效果
+    async def apply(self):  # 应用效果
+        Game.add_score()  # 只加分
+        name = self.trg_type
+        status = [name, 0]
+        await self.hang_fx(status, True)
+
+
+class FxAclrt(FxBase):  # 加速点效果
+    async def apply(self):
+        name = self.trg_type
+        last_for_cfg = self.last_for_cfg
         self.line.add_tail()  # 增长尾巴
         Game.add_score()  # 加分
         last_for = last_for_cfg[name]
@@ -572,12 +589,15 @@ class Trigger:  # 触发点类
         temp_velo = velo_before+velo_add  # 暂且而言的新速度
         if temp_velo <= 1:  # 速度封顶
             self.line.velo = temp_velo  # 设置速度
-            await self.__hang_fx(status)
+            await self.hang_fx(status)
             current_speed = self.line.velo  # 因为是异步执行，速度可能已经改变了，再获取一次
             self.line.velo = current_speed-velo_add  # 恢复速度
 
-    async def __trg_dece(self, *args):
-        name, pos, last_for_cfg = args
+
+class FxDclrt(FxBase):  # 减速点效果
+    async def apply(self):
+        name = self.trg_type
+        last_for_cfg = self.last_for_cfg
         self.line.add_tail()  # 增长尾巴
         Game.add_score()  # 加分
         last_for = last_for_cfg[name]
@@ -587,23 +607,30 @@ class Trigger:  # 触发点类
         temp_velo = velo_before-velo_rmv  # 暂且而言的新速度
         if temp_velo > 0:  # 速度封底
             self.line.velo = temp_velo  # 设置速度
-            await self.__hang_fx(status)
+            await self.hang_fx(status)
             current_speed = self.line.velo  # 因为是异步执行，速度可能已经改变了，再获取一次
             self.line.velo = current_speed+velo_rmv  # 恢复速度
 
-    async def __trg_myopia(self, *args):
-        name, pos, last_for_cfg = args
+
+class FxMyopia(FxBase):  # 近视点效果
+    async def apply(self):
+        name = self.trg_type
+        last_for_cfg = self.last_for_cfg
         last_for = last_for_cfg[name]
         status = [name, last_for]
         Game.add_score()  # 加分
 
         def keep():
             Game.myopia(True)  # 多个近视效果可以叠加
-        await self.__hang_fx(status, False, keep)
+        await self.hang_fx(status, False, keep)
         Game.myopia(False)
 
-    async def __trg_bomb(self, *args):
-        name, pos, last_for_cfg = args
+
+class FxBomb(FxBase):  # 爆炸点效果
+    async def apply(self):
+        name = self.trg_type
+        pos = self.pos
+        last_for_cfg = self.last_for_cfg
         flash_time = last_for_cfg[name]['flash']
         explode_time = last_for_cfg[name]['explode']
         self.line.add_tail()  # 增长尾巴
@@ -648,8 +675,11 @@ class Trigger:  # 触发点类
         Game.explode_points.clear()  # 清空爆炸碰撞点
         del effects[sub]  # 删除效果
 
-    async def __trg_ivcb(self, *args):
-        name, pos, last_for_cfg = args
+
+class FxIvcb(FxBase):  # 无敌点效果
+    async def apply(self):
+        name = self.trg_type
+        last_for_cfg = self.last_for_cfg
         self.line.add_tail()  # 增长尾巴
         last_for = last_for_cfg[name]  # 效果持续6秒
         status = [name, last_for]
@@ -657,11 +687,13 @@ class Trigger:  # 触发点类
 
         def keep(attr):
             attrs[name] = True  # 多个无敌效果可以叠加
-        await self.__hang_fx(status, False, keep, attrs)
+        await self.hang_fx(status, False, keep, attrs)
         attrs[name] = False
 
-    async def __trg_stones(self, *args):
-        name, pos, last_for_cfg = args
+
+class FxStones(FxBase):  # 流石点效果
+    async def apply(self):
+        name = self.trg_type
         self.line.add_tail()  # 增长尾巴
         Game.add_score()  # 加分
         if len(Game.flow_stones) > 0:  # 如果已经有流石就不重复执行
@@ -698,12 +730,14 @@ class Trigger:  # 触发点类
         Game.flow_stones.clear()  # 清空流石
         del effects[sub]  # 删除效果
 
-    async def __trg_tp(self, *args):
-        name, pos, last_for_cfg = args
+
+class FxTlpt(FxBase):  # 传送点效果
+    async def apply(self):
+        name = self.trg_type
         self.line.add_tail()  # 增长尾巴
         Game.add_score()  # 加分
         ava_points = self.ava_points(True)  # 获得所有可用的点(偏移边界)
         attrs = self.line.attrs
         attrs['head_pos'] = random.choice(ava_points)  # 把头随机传送到一个地方
         status = [name, 0]
-        await self.__hang_fx(status, True)
+        await self.hang_fx(status, True)
