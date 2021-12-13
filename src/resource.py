@@ -19,77 +19,142 @@ class Res:
             'diff_cfg': {  # 不同困难度对应的配置
                 "1": {
                     "map_size": (50, 15),
+                    "short_sight": (7, 5),  # 近视时的视野
                     "init_velo": 0.4,  # 值得注意的是，速度最大值不能超过1格/tick，不然会绘制计算错误
                     "triggers": {  # 触发点的生成概率，支持小数点后三位
-                        "normal": 0.5,
-                        "bonus": 0.05,
-                        "accelerate": 0.08,
-                        "decelerate": 0.02,
-                        "myopia": 0.05,
-                        "bomb": 0.04,
-                        "invincibility": 0.05,
-                        "stones": 0.06,
-                        "teleport": 0.15
+                        "summon": {
+                            "normal": 0.5,
+                            "bonus": 0.05,
+                            "accelerate": 0.08,
+                            "decelerate": 0.02,
+                            "myopia": 0.05,
+                            "bomb": 0.04,
+                            "invincibility": 0.05,
+                            "stones": 0.06,
+                            "teleport": 0.15
+                        },
+                        "last_for": {
+                            "accelerate": 5,
+                            "decelerate": 5,
+                            "myopia": 3,
+                            "bomb": {
+                                "flash": 1.5,  # 爆炸闪烁时间，支持小数点后一位
+                                "explode": 0.5  # 爆炸持续时间，支持小数点后一位
+                            },
+                            "invincibility": 6
+                        }
                     }
                 },
                 "2": {
                     "map_size": (50, 15),
+                    "short_sight": (7, 5),  # 近视时的视野
                     "init_velo": 0.5,
                     "triggers": {
-                        "normal": 0.4,
-                        "bonus": 0.05,
-                        "accelerate": 0.09,
-                        "decelerate": 0.02,
-                        "myopia": 0.09,
-                        "bomb": 0.09,
-                        "invincibility": 0.05,
-                        "stones": 0.07,
-                        "teleport": 0.14
+                        "summon": {
+                            "normal": 0.4,
+                            "bonus": 0.05,
+                            "accelerate": 0.09,
+                            "decelerate": 0.02,
+                            "myopia": 0.09,
+                            "bomb": 0.09,
+                            "invincibility": 0.05,
+                            "stones": 0.07,
+                            "teleport": 0.14
+                        },
+                        "last_for": {
+                            "accelerate": 5,
+                            "decelerate": 5,
+                            "myopia": 3,
+                            "bomb": {
+                                "flash": 1.5,  # 爆炸闪烁时间，支持小数点后一位
+                                "explode": 0.5  # 爆炸持续时间，支持小数点后一位
+                            },
+                            "invincibility": 6
+                        }
                     }
                 },
                 "3": {
                     "map_size": (40, 10),
+                    "short_sight": (7, 5),  # 近视时的视野
                     "init_velo": 0.3,
                     "triggers": {
-                        "normal": 0.3,
-                        "bonus": 0.05,
-                        "accelerate": 0.2,
-                        "decelerate": 0.02,
-                        "myopia": 0.09,
-                        "bomb": 0.10,
-                        "invincibility": 0.05,
-                        "stones": 0.09,
-                        "teleport": 0.1
+                        "summon": {
+                            "normal": 0.3,
+                            "bonus": 0.05,
+                            "accelerate": 0.2,
+                            "decelerate": 0.02,
+                            "myopia": 0.09,
+                            "bomb": 0.10,
+                            "invincibility": 0.05,
+                            "stones": 0.09,
+                            "teleport": 0.1
+                        },
+                        "last_for": {
+                            "accelerate": 5,
+                            "decelerate": 5,
+                            "myopia": 3,
+                            "bomb": {
+                                "flash": 1.5,  # 爆炸闪烁时间，支持小数点后一位
+                                "explode": 0.5  # 爆炸持续时间，支持小数点后一位
+                            },
+                            "invincibility": 6
+                        }
                     }
                 },
                 "4": {
                     "map_size": (35, 10),
+                    "short_sight": (7, 5),  # 近视时的视野
                     "init_velo": 0.4,
                     "triggers": {
-                        "normal": 0.25,
-                        "bonus": 0.05,
-                        "accelerate": 0.12,
-                        "decelerate": 0.02,
-                        "myopia": 0.1,
-                        "bomb": 0.11,
-                        "invincibility": 0.05,
-                        "stones": 0.2,
-                        "teleport": 0.1
+                        "summon": {
+                            "normal": 0.25,
+                            "bonus": 0.05,
+                            "accelerate": 0.12,
+                            "decelerate": 0.02,
+                            "myopia": 0.1,
+                            "bomb": 0.11,
+                            "invincibility": 0.05,
+                            "stones": 0.2,
+                            "teleport": 0.1
+                        },
+                        "last_for": {
+                            "accelerate": 5,
+                            "decelerate": 5,
+                            "myopia": 3,
+                            "bomb": {
+                                "flash": 1.5,  # 爆炸闪烁时间，支持小数点后一位
+                                "explode": 0.5  # 爆炸持续时间，支持小数点后一位
+                            },
+                            "invincibility": 6
+                        }
                     }
                 },
                 "5": {
                     "map_size": (30, 10),
+                    "short_sight": (7, 5),  # 近视时的视野
                     "init_velo": 0.5,
                     "triggers": {
-                        "normal": 0.25,
-                        "bonus": 0.03,
-                        "accelerate": 0.10,
-                        "decelerate": 0.02,
-                        "myopia": 0.13,
-                        "bomb": 0.15,
-                        "invincibility": 0.07,
-                        "stones": 0.15,
-                        "teleport": 0.1
+                        "summon": {
+                            "normal": 0.25,
+                            "bonus": 0.03,
+                            "accelerate": 0.10,
+                            "decelerate": 0.02,
+                            "myopia": 0.13,
+                            "bomb": 0.15,
+                            "invincibility": 0.07,
+                            "stones": 0.15,
+                            "teleport": 0.1
+                        },
+                        "last_for": {
+                            "accelerate": 5,
+                            "decelerate": 5,
+                            "myopia": 3,
+                            "bomb": {
+                                "flash": 1.5,  # 爆炸闪烁时间，支持小数点后一位
+                                "explode": 0.5  # 爆炸持续时间，支持小数点后一位
+                            },
+                            "invincibility": 6
+                        }
                     }
                 }
             },

@@ -130,8 +130,8 @@ class Game:
         if not cls.short_sighted:  # 没有近视就默认情况
             win_obj.addstr(pos_y, pos_x, string, *args)
         else:  # 近视了就特殊打印
-            sight_w = 7  # 视野宽度
-            sight_h = 5  # 视野高度
+            short_sight = cls.game_cfg['short_sight']
+            sight_w, sight_h = short_sight
             map_w, map_h = cls.map_size  # 获得地图尺寸
             x_ratio = map_w//sight_w  # x方向比例
             y_ratio = map_h//sight_h  # y方向比例
@@ -501,8 +501,8 @@ class Trigger:  # 触发点类
     def make(self):  # 做饭...啊不，是随机放置触发点的方法
         ava_points = self.ava_points()
         sub = len(self.triggers)  # 获得点坐标储存下标
-        trg_config = Game.game_cfg['triggers']  # 获得触发点生成比率
-        chosen_type = Res.ratio_rand(trg_config)  # 使用ratiorand方法来随机生成的类型
+        summon_config = Game.game_cfg['triggers']['summon']  # 获得触发点生成比率字典
+        chosen_type = Res.ratio_rand(summon_config)  # 使用ratiorand方法来随机生成的类型
         # 生成触发点新出现的坐标
         new_point = {
             "type": chosen_type,
@@ -522,6 +522,7 @@ class Trigger:  # 触发点类
                          Game.color_pair(color_num))
 
     async def __trg_async(self, trg_type, pos):  # 异步处理分发
+        last_for_cfg = Game.game_cfg['triggers']['last_for']  # 获得持续时间配置
         trg_funcs = {
             'normal': self.__trg_normal,
             'bonus': self.__trg_bonus,
@@ -533,7 +534,7 @@ class Trigger:  # 触发点类
             'stones': self.__trg_stones,
             'teleport': self.__trg_tp
         }
-        await trg_funcs[trg_type](pos)
+        await trg_funcs[trg_type](trg_type, pos, last_for_cfg)
 
     # 挂起效果(status,是否只弹一下,在循环里执行的额外函数，用于额外函数的参数)
     async def __hang_fx(self, status, pop=False, extra_func=False, *args):
@@ -548,21 +549,25 @@ class Trigger:  # 触发点类
             await asyncio.sleep(1)
         del effects[sub]  # 删除效果
 
-    async def __trg_normal(self, pos):
+    async def __trg_normal(self, *args):
+        # name,pos,last_for_cfg=args
+        name = 'normal'
         self.line.add_tail()  # 增长尾巴
         Game.add_score()  # 加分
 
-    async def __trg_bonus(self, pos):
+    async def __trg_bonus(self, *args):
+        name, pos, last_for_cfg = args
         Game.add_score()  # 只加分
-        status = ['bonus', 0]
+        status = [name, 0]
         await self.__hang_fx(status, True)
 
-    async def __trg_acce(self, pos):
+    async def __trg_acce(self, *args):
+        name, pos, last_for_cfg = args
         self.line.add_tail()  # 增长尾巴
         Game.add_score()  # 加分
-        last_for = 5  # 效果持续5秒
+        last_for = last_for_cfg[name]
         velo_add = 0.2  # 增加的速度
-        status = ['accelerate', last_for]
+        status = [name, last_for]
         velo_before = self.line.velo  # 之前的速度
         temp_velo = velo_before+velo_add  # 暂且而言的新速度
         if temp_velo <= 1:  # 速度封顶
@@ -571,12 +576,13 @@ class Trigger:  # 触发点类
             current_speed = self.line.velo  # 因为是异步执行，速度可能已经改变了，再获取一次
             self.line.velo = current_speed-velo_add  # 恢复速度
 
-    async def __trg_dece(self, pos):
+    async def __trg_dece(self, *args):
+        name, pos, last_for_cfg = args
         self.line.add_tail()  # 增长尾巴
         Game.add_score()  # 加分
-        last_for = 5  # 效果持续5秒
+        last_for = last_for_cfg[name]
         velo_rmv = 0.2  # 降低的速度
-        status = ['decelerate', last_for]
+        status = [name, last_for]
         velo_before = self.line.velo  # 之前的速度
         temp_velo = velo_before-velo_rmv  # 暂且而言的新速度
         if temp_velo > 0:  # 速度封底
@@ -585,9 +591,10 @@ class Trigger:  # 触发点类
             current_speed = self.line.velo  # 因为是异步执行，速度可能已经改变了，再获取一次
             self.line.velo = current_speed+velo_rmv  # 恢复速度
 
-    async def __trg_myopia(self, pos):
-        last_for = 3  # 效果持续3秒
-        status = ['myopia', last_for]
+    async def __trg_myopia(self, *args):
+        name, pos, last_for_cfg = args
+        last_for = last_for_cfg[name]
+        status = [name, last_for]
         Game.add_score()  # 加分
 
         def keep():
@@ -595,7 +602,10 @@ class Trigger:  # 触发点类
         await self.__hang_fx(status, False, keep)
         Game.myopia(False)
 
-    async def __trg_bomb(self, pos):
+    async def __trg_bomb(self, *args):
+        name, pos, last_for_cfg = args
+        flash_time = last_for_cfg[name]['flash']
+        explode_time = last_for_cfg[name]['explode']
         self.line.add_tail()  # 增长尾巴
         effects = self.line.effects
         to_explode_color = Game.styles['to_explode_color']
@@ -603,16 +613,19 @@ class Trigger:  # 触发点类
         explode_color = Game.styles['explode_color']
         explode = Game.styles['explode']
         sub = time.time()  # 插入的下标
-        status = ['bomb', 0]
+        status = [name, 0]
         effects[sub] = status
         Game.set_color(20, to_explode_color)  # 20号颜色对用于爆炸点
         Game.set_color(21, explode_color)  # 21号颜色对用于爆炸粒子
         x, y = pos
-        for i in range(15):  # 爆炸前闪烁1.5秒
+        tick_interval = 0.1
+        flash_tick = floor(flash_time/tick_interval)
+        explode_tick = floor(explode_time/tick_interval)
+        for i in range(flash_tick):  # 爆炸前闪烁
             if i % 2 == 0:
                 Game.printer(y, x, to_explode, Game.color_pair(20))
                 Game.game_area.refresh()
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(tick_interval)
         # 生成器表达式随机生成爆炸的宽度和高度
         explosion_w, explosion_h = (random.choice((3, 5)) for i in range(2))
         # 生成爆炸范围左上角的坐标
@@ -625,33 +638,35 @@ class Trigger:  # 触发点类
         Game.explode_points.update(explode_points)  # 向游戏主体传入爆炸碰撞点
         self.line.tail_impact(explode_points)  # 爆炸削掉尾巴
         # 选取显示的粒子样本中的粒子数量
-        for i in range(5):  # 爆炸粒子动画0.5秒
+        for i in range(explode_tick):  # 爆炸粒子动画
             particles_num = random.randrange(3, (explosion_w*explosion_h)//2)
             particles = random.sample(explode_points, particles_num)
             for px, py in particles:
                 Game.printer(py, px, explode, Game.color_pair(21))
             Game.game_area.refresh()
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(tick_interval)
         Game.explode_points.clear()  # 清空爆炸碰撞点
         del effects[sub]  # 删除效果
 
-    async def __trg_ivcb(self, pos):
+    async def __trg_ivcb(self, *args):
+        name, pos, last_for_cfg = args
         self.line.add_tail()  # 增长尾巴
-        last_for = 6  # 效果持续6秒
-        status = ['invincibility', last_for]
+        last_for = last_for_cfg[name]  # 效果持续6秒
+        status = [name, last_for]
         attrs = self.line.attrs
 
         def keep(attr):
-            attrs['invincibility'] = True  # 多个无敌效果可以叠加
+            attrs[name] = True  # 多个无敌效果可以叠加
         await self.__hang_fx(status, False, keep, attrs)
-        attrs['invincibility'] = False
+        attrs[name] = False
 
-    async def __trg_stones(self, pos):
+    async def __trg_stones(self, *args):
+        name, pos, last_for_cfg = args
         self.line.add_tail()  # 增长尾巴
         Game.add_score()  # 加分
         if len(Game.flow_stones) > 0:  # 如果已经有流石就不重复执行
             return True
-        status = ['stones', 0]
+        status = [name, 0]
         map_w, map_h = Game.map_size  # 获得地图大小
         effects = self.line.effects
         sub = time.time()  # 插入的下标
@@ -683,11 +698,12 @@ class Trigger:  # 触发点类
         Game.flow_stones.clear()  # 清空流石
         del effects[sub]  # 删除效果
 
-    async def __trg_tp(self, pos):
+    async def __trg_tp(self, *args):
+        name, pos, last_for_cfg = args
         self.line.add_tail()  # 增长尾巴
         Game.add_score()  # 加分
         ava_points = self.ava_points(True)  # 获得所有可用的点(偏移边界)
         attrs = self.line.attrs
         attrs['head_pos'] = random.choice(ava_points)  # 把头随机传送到一个地方
-        status = ['teleport', 0]
+        status = [name, 0]
         await self.__hang_fx(status, True)
