@@ -101,7 +101,7 @@ class Game:
         map_w, map_h = map(lambda x: x+3, cls.map_size)  # 获得地图大小
         # 根据地图大小创建游戏区域，要比地图大小稍微大一点
         game_area = curses.newwin(map_h, map_w, 1, 1)
-        msg_area = curses.newwin(8, map_w, map_h+1, 1)
+        msg_area = curses.newwin(8, 60, map_h+1, 1)
         game_area.keypad(True)  # 支持上下左右等特殊按键
         game_area.nodelay(True)  # 非阻塞，用户没操作游戏要持续进行
         cls.game_area = game_area
@@ -220,11 +220,15 @@ class Game:
             'gameover')  # 获得艺术字GAME OVER
         self.tui.addstr(1, 1, Res.x_offset(over_text, 1))
         self.msg_area.mvwin(text_h+1, 1)  # 移动一下msg区的位置
-        pattern = '{:-^' + str(text_w) + '}'
-        result_text = pattern.format('RESULT')
+        pattern1 = '{:#^' + str(text_w) + '}'
+        pattern2 = '{: ^' + str(text_w) + '}'
+        result_text = pattern1.format(' R E S U L T ')
         score, tail_len, total = map(str, self.calc_score())
         total_score = float(total)  # 总成绩
-        score_text = 'SCORE: ' + score+'\nTAIL LENGTH: '+tail_len+'\nTOTAL SCORE: '+total
+        score_item = pattern2.format('SCORE: ' + score)
+        tail_item = pattern2.format('TAIL LENGTH: '+tail_len)
+        total_item = pattern2.format('TOTAL SCORE: '+total)
+        score_text = score_item+'\n'+tail_item+'\n'+total_item
         self.msg_area.addstr(0, 0, result_text)
         self.msg_area.addstr(1, 0, score_text)
         self.msg_area.addstr(
@@ -570,7 +574,7 @@ class FxNormal(FxBase):  # 普通触发点效果
 
 class FxBonus(FxBase):  # 得分点效果
     async def apply(self):  # 应用效果
-        Game.add_score()  # 只加分
+        Game.add_score(2)  # 只加分，加两分
         name = self.trg_type
         status = [name, 0]
         await self.hang_fx(status, True)
