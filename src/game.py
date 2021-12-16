@@ -67,6 +67,7 @@ class Game:
         cls.__tick_interval = round(1/tps, 4)  # 算出tick间隔，保留四位小数
         cls.__ins_list = {}  # 储存实例的列表
         cls.__task_list = task_list
+        cls.__sight_points = set()  # 储存近视情况下的视野点集合
         cls.tui = curses.initscr()  # 初始化curses，生成tui界面
 
     @classmethod
@@ -123,6 +124,26 @@ class Game:
     def myopia(cls, toggle):  # 是否近视
         cls.short_sighted = toggle
 
+    @classmethod
+    def get_sight_info(cls):  # 获得myopia相关方法需要的属性
+        short_sight = cls.game_cfg['short_sight']
+        sight_w, sight_h = short_sight
+        line_ins = cls.get_ins('line')  # 取出ins实例
+        x, y = map(floor, line_ins.attrs['head_pos'])
+        return (x, y, sight_w, sight_h)
+
+    @classmethod
+    def update_myopia_sight(cls):  # 生成近视区域，搭配Line.move方法
+        if cls.short_sighted:
+            x, y, sight_w, sight_h = cls.get_sight_info()
+            l_t_x = x - (sight_w-1)//2
+            l_t_y = y - (sight_h-1)//2
+            # 得到视野区所有坐标点
+            sight_points = {(xi, yi) for yi in range(l_t_y, l_t_y+sight_h)
+                            for xi in range(l_t_x, l_t_x+sight_w)}
+            cls.__sight_points.clear()
+            cls.__sight_points.update(sight_points)
+
     # 接管curses addstr，为了适配myopia模式
     @classmethod
     def printer(cls, pos_y, pos_x, string, *args):
@@ -130,21 +151,14 @@ class Game:
         if not cls.short_sighted:  # 没有近视就默认情况
             win_obj.addstr(pos_y, pos_x, string, *args)
         else:  # 近视了就特殊打印
-            short_sight = cls.game_cfg['short_sight']
-            sight_w, sight_h = short_sight
-            map_w, map_h = cls.map_size  # 获得地图尺寸
-            x_ratio = map_w//sight_w  # x方向比例
-            y_ratio = map_h//sight_h  # y方向比例
-            x_center = map_w//2  # 地图中x方向中心
-            y_center = map_h//2  # 地图中y方向中心
-            line_ins = cls.get_ins('line')  # 取出ins实例
-            x, y = map(floor, line_ins.attrs['head_pos'])
-            l_t_x = x - (sight_w-1)//2
-            l_t_y = y - (sight_h-1)//2
-            # 得到视野区所有坐标点
-            sight_points = {(xi, yi) for yi in range(l_t_y, l_t_y+sight_h)
-                            for xi in range(l_t_x, l_t_x+sight_w)}
+            sight_points = cls.__sight_points
             if (pos_x, pos_y) in sight_points:  # 如果要打印的内容在视野区
+                x, y, sight_w, sight_h = cls.get_sight_info()
+                map_w, map_h = cls.map_size  # 获得地图尺寸
+                x_ratio = map_w//sight_w  # x方向比例
+                y_ratio = map_h//sight_h  # y方向比例
+                x_center = map_w//2  # 地图中x方向中心
+                y_center = map_h//2  # 地图中y方向中心
                 relative_x = pos_x-x  # x方向上相对头部距离
                 relative_y = pos_y-y  # y方向上相对头部距离
                 c_t_x = x_center+relative_x*x_ratio  # 找出在放大视野中的中心x坐标
@@ -398,6 +412,7 @@ class Line:  # 初始化运动线
         body_pos = attrs['body_pos']  # 引用索引
         body_len = len(body_pos)
         if not (floor(x) == prev_x and floor(y) == prev_y):
+            Game.update_myopia_sight()  # 在蛇体移动一格的情况下更新近视情况下的区域
             if body_len > 0:  # 身体长度大于0再进行处理
                 body_pos = body_pos[1::]
                 body_pos.append((prev_x, prev_y))
