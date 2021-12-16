@@ -95,7 +95,7 @@ class Game:
             border_points.update({(w, 0), (w, map_h)})
         for h in range(map_h+1):  # 让竖直方向的边框长一点
             border_points.update({(0, h), (map_w, h)})
-        cls.border_points = list(border_points)
+        cls.border_points = border_points
 
     @classmethod
     def create_area(cls):
@@ -501,14 +501,14 @@ class Trigger:  # 触发点类
 
     def ava_points(self, border_offset=False):  # 获得可用的点
         attrs = self.__line.attrs  # 获得线体属性
-        exist_points = []+attrs['body_pos']  # 脱离原来的引用
-        exist_points.append(attrs['head_pos'])
-        exist_triggers = [i['pos']
-                          for i in self.triggers.values()]  # 获得所有触发点占用的坐标点
-        exist_points += exist_triggers  # exist_points储存的是已经使用的坐标点
-        exist_points += Game.border_points  # 还要算入边框的点
+        exist_points = set(attrs['body_pos'])  # 脱离原来的引用，转换为集合
+        exist_points.add(attrs['head_pos'])
+        # 获得所有触发点占用的坐标点集合
+        exist_triggers = {i['pos'] for i in self.triggers.values()}
+        exist_points.update(exist_triggers)  # exist_points储存的是已经使用的坐标点
+        exist_points.update(Game.border_points)  # 还要算入边框的点
         # 将所有的坐标点和已经使用的坐标点作差集，就是还可以选用的坐标点
-        usable_points = Game.map_points - set(exist_points)
+        usable_points = Game.map_points - exist_points
         # 如果不要靠近边界
         if border_offset:
             offset = 3
@@ -517,7 +517,7 @@ class Trigger:  # 触发点类
                         for yi in range(3, map_h-offset-1)}
             # 利用交集得出可用的点
             usable_points = usable_points & ava_area
-        return tuple(usable_points)
+        return tuple(usable_points)  # 因为random.choice选不了set
 
     def make(self):  # 做饭...啊不，是随机放置触发点的方法
         ava_points = self.ava_points()
