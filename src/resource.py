@@ -263,7 +263,7 @@ class Res:
         pre_ranking = self.get_ranking()
         rank_list = pre_ranking['rank_list']
         current_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-        if len(rank_list) > config['max_rank_len']:  # 超出排名收录的数量了
+        if len(rank_list) >= config['max_rank_len']:  # 超出排名收录的数量了
             last_one = rank_list[-1]  # 找到当前排名最后的
             if total_score > last_one[1]:
                 rank_list.pop()

@@ -25,6 +25,11 @@ TUI游戏，一条像贪吃蛇的线。
 
 ## 如何运行  
 
+<details open>
+<summary>展开阅读</summary>
+
+------
+
 * 方法一
 
     1. ```Python```环境 **≥ 3.7**
@@ -47,7 +52,15 @@ TUI游戏，一条像贪吃蛇的线。
 
     2. 解压到**目录**后**双击**```app.exe```运行程序。  
 
+</details>
+
 ## 运行时可能出现的问题
+
+<details>
+<summary>展开阅读</summary>
+
+---------
+
 1. 运行即报错:  
 
     很有可能是```Python```版本低于```3.7```导致的。也有可能是窗口过小（见下面）  
@@ -76,6 +89,8 @@ TUI游戏，一条像贪吃蛇的线。
 
 ![drag to cmd](https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/pics/drag_to_cmd.gif)  
 
+</details>
+
 ## 游戏操作
 
 * 在**主菜单MENU**使用 ```W``` , ```S``` 或 ```↑``` , ```↓``` 按键进行选项切换，```ENTER```回车键选定。  
@@ -92,11 +107,30 @@ TUI游戏，一条像贪吃蛇的线。
 ------
 
 ## 游戏机制-触发点
-* 触发点与得分
+
+游戏中提供了 ```9``` 种**触发点**，在这里咱列举一下触发点的作用：
+
+* 触发点与得分  
+
+    |名字|默认样式|默认颜色|得分|是否增长尾巴|
+    |:---:|:---:|:---:|:---:|:---:|
+    |Normal|@|<img src="data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E %3Cg%3E %3Crect id='svg_2' height='40' width='40' y='0' x='0' fill='%23ff9500'/%3E %3C/g%3E %3C/svg%3E"/>|1|是|
+    |Bonus|+|<img src="data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E %3Cg%3E %3Crect id='svg_2' height='40' width='40' y='0' x='0' fill='%2300e0d1'/%3E %3C/g%3E %3C/svg%3E"/>|2|否|
+    |Accelerate|+|<img src="data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E %3Cg%3E %3Crect id='svg_2' height='40' width='40' y='0' x='0' fill='%2300eba4'/%3E %3C/g%3E %3C/svg%3E"/>|1|是|
+    |Decelerate|+|<img src="data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E %3Cg%3E %3Crect id='svg_2' height='40' width='40' y='0' x='0' fill='%2300eba4'/%3E %3C/g%3E %3C/svg%3E"/>|1|是|
+    |Myopia|*|<img src="data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E %3Cg%3E %3Crect id='svg_2' height='40' width='40' y='0' x='0' fill='%2310eb00'/%3E %3C/g%3E %3C/svg%3E"/>|1|否|
+    |Bomb|*|<img src="data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E %3Cg%3E %3Crect id='svg_2' height='40' width='40' y='0' x='0' fill='%23fbff00'/%3E %3C/g%3E %3C/svg%3E"/>|0|是|
+    |Invincibility|$|<img src="data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E %3Cg%3E %3Crect id='svg_2' height='40' width='40' y='0' x='0' fill='%23ff8800'/%3E %3C/g%3E %3C/svg%3E"/>|0|是|
+    |Stones|@|<img src="data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E %3Cg%3E %3Crect id='svg_2' height='40' width='40' y='0' x='0' fill='%23ff9500'/%3E %3C/g%3E %3C/svg%3E"/>|1|是|
+    |Teleport|$|<img src="data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E %3Cg%3E %3Crect id='svg_2' height='40' width='40' y='0' x='0' fill='%23d8f500'/%3E %3C/g%3E %3C/svg%3E"/>|1|是|
+
 
 * 触发点与效果
 
-To be updated~
+    |名字|效果|演示|
+    |:---:|:---:|:---:|
+    |Normal|普通的加分，增长尾巴点|这个就不用特别演示了吧...|
+    |Bonus|额外得分点，不增长尾巴|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/pics/trigger-bonus.gif)| 
 
 ## 游戏机制-局终判定
 
@@ -107,6 +141,10 @@ To be updated~
 To be updated~
 
 ------
+
+## 配置文件
+
+To be updated~
 
 ## 为什么界面是英文
 
