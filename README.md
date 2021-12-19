@@ -114,23 +114,30 @@ TUI游戏，一条像贪吃蛇的线。
 
     |名字|默认样式|默认颜色|得分|是否增长尾巴|
     |:---:|:---:|:---:|:---:|:---:|
-    |Normal|@|<img src="data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E %3Cg%3E %3Crect id='svg_2' height='40' width='40' y='0' x='0' fill='%23ff9500'/%3E %3C/g%3E %3C/svg%3E"/>|1|是|
-    |Bonus|+|<img src="data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E %3Cg%3E %3Crect id='svg_2' height='40' width='40' y='0' x='0' fill='%2300e0d1'/%3E %3C/g%3E %3C/svg%3E"/>|2|否|
-    |Accelerate|+|<img src="data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E %3Cg%3E %3Crect id='svg_2' height='40' width='40' y='0' x='0' fill='%2300eba4'/%3E %3C/g%3E %3C/svg%3E"/>|1|是|
-    |Decelerate|+|<img src="data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E %3Cg%3E %3Crect id='svg_2' height='40' width='40' y='0' x='0' fill='%2300eba4'/%3E %3C/g%3E %3C/svg%3E"/>|1|是|
-    |Myopia|*|<img src="data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E %3Cg%3E %3Crect id='svg_2' height='40' width='40' y='0' x='0' fill='%2310eb00'/%3E %3C/g%3E %3C/svg%3E"/>|1|否|
-    |Bomb|*|<img src="data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E %3Cg%3E %3Crect id='svg_2' height='40' width='40' y='0' x='0' fill='%23fbff00'/%3E %3C/g%3E %3C/svg%3E"/>|0|是|
-    |Invincibility|$|<img src="data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E %3Cg%3E %3Crect id='svg_2' height='40' width='40' y='0' x='0' fill='%23ff8800'/%3E %3C/g%3E %3C/svg%3E"/>|0|是|
-    |Stones|@|<img src="data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E %3Cg%3E %3Crect id='svg_2' height='40' width='40' y='0' x='0' fill='%23ff9500'/%3E %3C/g%3E %3C/svg%3E"/>|1|是|
-    |Teleport|$|<img src="data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E %3Cg%3E %3Crect id='svg_2' height='40' width='40' y='0' x='0' fill='%23d8f500'/%3E %3C/g%3E %3C/svg%3E"/>|1|是|
+    |Normal|@|<img src="https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/svg/trigger-normal.svg"/>|1|是|
+    |Bonus|+|<img src="https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/svg/trigger-bonus.svg"/>|2|否|
+    |Accelerate|+|<img src="https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/svg/trigger-accelerate.svg"/>|1|是|
+    |Decelerate|+|<img src="https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/svg/trigger-decelerate.svg"/>|1|是|
+    |Myopia|*|<img src="https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/svg/trigger-myopia.svg"/>|1|否|
+    |Bomb|*|<img src="https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/svg/trigger-bomb.svg"/>|0|是|
+    |Invincibility|$|<img src="https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/svg/trigger-invincibility.svg"/>|0|是|
+    |Stones|@|<img src="https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/svg/trigger-stones.svg"/>|1|是|
+    |Teleport|$|<img src="https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/svg/trigger-teleport.svg"/>|1|是|
 
 
 * 触发点与效果
 
     |名字|效果|演示|
     |:---:|:---:|:---:|
-    |Normal|普通的加分，增长尾巴点|这个就不用特别演示了吧...|
-    |Bonus|额外得分点，不增长尾巴|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/pics/trigger-bonus.gif)| 
+    |Normal|普通的加分|这个就不用特别演示了吧...|
+    |Bonus|额外得分点，不会加长尾巴|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/pics/trigger-bonus.gif)| 
+    |Accelerate|碰到后线体会加速|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/pics/trigger-accelerate.gif)| 
+    |Decelerate|碰到后线体会减速|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/pics/trigger-decelerate.gif)|
+    |Myopia|碰到后会近视(视野减小)|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/pics/trigger-myopia.gif)|
+    |Bomb|触发后闪烁一会儿即爆炸，被炸到的尾巴会被削去，被炸到头就G了|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/pics/trigger-bomb.gif)|
+    |Invincibility|触发后线体会进入无敌模式，不会被判死|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/pics/trigger-invincibility.gif)|
+    |Stones|碰到后有流石会从随机方向闯入区域，线体头碰到流石时就游戏结束|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/pics/trigger-stones.gif)|
+    |Teleport|碰到后会被传送到地图中间的随机地方|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/pics/trigger-teleport.gif)|
 
 ## 游戏机制-局终判定
 
