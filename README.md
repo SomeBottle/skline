@@ -14,14 +14,6 @@ TUI游戏，一条像贪吃蛇的线。
 着手时间：2021.12.4  
 收手时间：2021.12.12
 
-## 课设说明  
-
-1. [课程设计概述](https://github.com/SomeBottle/skline@main/blob/main/docs/AboutTheCourseProject.md)  
-
-2. [需求分析](https://github.com/SomeBottle/skline@main/blob/main/docs/RequirementsAnalysis.md)  
-
-3. [使用的标准库和扩展库](https://github.com/SomeBottle/skline@main/blob/main/docs/Libraries.md)  
-
 
 ## 如何运行  
 
@@ -108,6 +100,13 @@ TUI游戏，一条像贪吃蛇的线。
 
 ## 游戏机制-触发点
 
+<details>
+<summary>展开阅读</summary>
+
+--------
+
+虽然称作是触发点，实际上也没啥高大上的，就是贪吃蛇里的食物罢了，不过我觉着这里不止是食物，所以就叫触发(Trigger)点了~∠( ᐛ 」∠)＿  
+
 游戏中提供了 ```9``` 种**触发点**，在这里咱列举一下触发点的作用：
 
 * 触发点与得分  
@@ -139,6 +138,8 @@ TUI游戏，一条像贪吃蛇的线。
     |Stones|碰到后有流石会从随机方向闯入区域，线体头碰到流石时就游戏结束|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/trigger-stones.gif)|
     |Teleport|碰到后会被传送到地图中间的随机地方|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/trigger-teleport.gif)|
 
+</details>
+
 ## 游戏机制-局终判定
 
 To be updated~
@@ -151,7 +152,15 @@ To be updated~
 
 ## 配置文件
 
-To be updated~
+To be updated~  
+
+## 课设说明  
+
+1. [课程设计概述](https://github.com/SomeBottle/skline@main/blob/main/docs/AboutTheCourseProject.md)  
+
+2. [需求分析](https://github.com/SomeBottle/skline@main/blob/main/docs/RequirementsAnalysis.md)  
+
+3. [使用的标准库和扩展库](https://github.com/SomeBottle/skline@main/blob/main/docs/Libraries.md)  
 
 ## 为什么界面是英文
 
