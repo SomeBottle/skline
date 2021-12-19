@@ -16,11 +16,11 @@ TUI游戏，一条像贪吃蛇的线。
 
 ## 课设说明  
 
-1. [课程设计概述](https://github.com/SomeBottle/skline/blob/main/docs/AboutTheCourseProject.md)  
+1. [课程设计概述](https://github.com/SomeBottle/skline@main/blob/main/docs/AboutTheCourseProject.md)  
 
-2. [需求分析](https://github.com/SomeBottle/skline/blob/main/docs/RequirementsAnalysis.md)  
+2. [需求分析](https://github.com/SomeBottle/skline@main/blob/main/docs/RequirementsAnalysis.md)  
 
-3. [使用的标准库和扩展库](https://github.com/SomeBottle/skline/blob/main/docs/Libraries.md)  
+3. [使用的标准库和扩展库](https://github.com/SomeBottle/skline@main/blob/main/docs/Libraries.md)  
 
 
 ## 如何运行  
@@ -48,7 +48,7 @@ TUI游戏，一条像贪吃蛇的线。
 
 * 方法二（仅限Windows）
 
-    1. 下载[```Releases```](https://github.com/SomeBottle/skline/releases/latest)里附件的压缩包。  
+    1. 下载[```Releases```](https://github.com/SomeBottle/skline@main/releases/latest)里附件的压缩包。  
 
     2. 解压到**目录**后**双击**```app.exe```运行程序。  
 
@@ -83,11 +83,11 @@ TUI游戏，一条像贪吃蛇的线。
 
     很有可能是终端屏幕小了，拉大就行。我在某个远程win7计算机上测试时发现**CMD窗口**竟然无法鼠标拖拉调整，怎么办呢？  
 
-    ![change the size](https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/pics/win_size_of_cmd.gif)  
+    ![change the size](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/win_size_of_cmd.gif)  
 
 如果按[方法二](#exec_method2)运行程序，抛出异常时可能会直接**闪退**。为了看到异常，你可以选择把```app.exe```**拖拽**到```命令提示符```或者```PowerShell```里然后执行：  
 
-![drag to cmd](https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/pics/drag_to_cmd.gif)  
+![drag to cmd](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/drag_to_cmd.gif)  
 
 </details>
 
@@ -114,15 +114,15 @@ TUI游戏，一条像贪吃蛇的线。
 
     |名字|默认样式|默认颜色|得分|是否增长尾巴|
     |:---:|:---:|:---:|:---:|:---:|
-    |Normal|@|<img src="https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/svg/trigger-normal.svg"/>|1|是|
-    |Bonus|+|<img src="https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/svg/trigger-bonus.svg"/>|2|否|
-    |Accelerate|+|<img src="https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/svg/trigger-accelerate.svg"/>|1|是|
-    |Decelerate|+|<img src="https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/svg/trigger-decelerate.svg"/>|1|是|
-    |Myopia|*|<img src="https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/svg/trigger-myopia.svg"/>|1|否|
-    |Bomb|*|<img src="https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/svg/trigger-bomb.svg"/>|0|是|
-    |Invincibility|$|<img src="https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/svg/trigger-invincibility.svg"/>|0|是|
-    |Stones|@|<img src="https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/svg/trigger-stones.svg"/>|1|是|
-    |Teleport|$|<img src="https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/svg/trigger-teleport.svg"/>|1|是|
+    |Normal|@|<img src="https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/svg/trigger-normal.svg"/>|1|是|
+    |Bonus|+|<img src="https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/svg/trigger-bonus.svg"/>|2|否|
+    |Accelerate|+|<img src="https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/svg/trigger-accelerate.svg"/>|1|是|
+    |Decelerate|+|<img src="https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/svg/trigger-decelerate.svg"/>|1|是|
+    |Myopia|*|<img src="https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/svg/trigger-myopia.svg"/>|1|否|
+    |Bomb|*|<img src="https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/svg/trigger-bomb.svg"/>|0|是|
+    |Invincibility|$|<img src="https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/svg/trigger-invincibility.svg"/>|0|是|
+    |Stones|@|<img src="https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/svg/trigger-stones.svg"/>|1|是|
+    |Teleport|$|<img src="https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/svg/trigger-teleport.svg"/>|1|是|
 
 
 * 触发点与效果
@@ -130,14 +130,14 @@ TUI游戏，一条像贪吃蛇的线。
     |名字|效果|演示|
     |:---:|:---:|:---:|
     |Normal|普通的加分|这个就不用特别演示了吧...|
-    |Bonus|额外得分点，不会加长尾巴|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/pics/trigger-bonus.gif)| 
-    |Accelerate|碰到后线体会加速|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/pics/trigger-accelerate.gif)| 
-    |Decelerate|碰到后线体会减速|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/pics/trigger-decelerate.gif)|
-    |Myopia|碰到后会近视(视野减小)|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/pics/trigger-myopia.gif)|
-    |Bomb|触发后闪烁一会儿即爆炸，被炸到的尾巴会被削去，被炸到头就G了|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/pics/trigger-bomb.gif)|
-    |Invincibility|触发后线体会进入无敌模式，不会被判死|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/pics/trigger-invincibility.gif)|
-    |Stones|碰到后有流石会从随机方向闯入区域，线体头碰到流石时就游戏结束|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/pics/trigger-stones.gif)|
-    |Teleport|碰到后会被传送到地图中间的随机地方|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline/docs/pics/trigger-teleport.gif)|
+    |Bonus|额外得分点，不会加长尾巴|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/trigger-bonus.gif)| 
+    |Accelerate|碰到后线体会加速|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/trigger-accelerate.gif)| 
+    |Decelerate|碰到后线体会减速|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/trigger-decelerate.gif)|
+    |Myopia|碰到后会近视(视野减小)|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/trigger-myopia.gif)|
+    |Bomb|触发后闪烁一会儿即爆炸，被炸到的尾巴会被削去，被炸到头就G了|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/trigger-bomb.gif)|
+    |Invincibility|触发后线体会进入无敌模式，不会被判死|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/trigger-invincibility.gif)|
+    |Stones|碰到后有流石会从随机方向闯入区域，线体头碰到流石时就游戏结束|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/trigger-stones.gif)|
+    |Teleport|碰到后会被传送到地图中间的随机地方|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/trigger-teleport.gif)|
 
 ## 游戏机制-局终判定
 
