@@ -299,4 +299,14 @@ TUI游戏，一条像贪吃蛇的线。
 
 ## 为什么界面是英文
 
-To be updated~  
+使用curses在终端输出中文得要解决一下编码的问题，这个其实还挺好办。但是吧，不同终端对中文显示的支持挺奇怪的：
+
+* bash  
+
+    ![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/bash-cn.png)  
+
+* Windows Command Line(PowerShell也一样)  
+
+    ![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/cmd-cn.png)  
+
+为了保证一致的显示，我决定就用英文了...
