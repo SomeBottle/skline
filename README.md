@@ -142,6 +142,11 @@ TUI游戏，一条像贪吃蛇的线。
 
 ## 游戏机制-局终判定
 
+<details>
+<summary>展开阅读</summary>
+
+------
+
 游戏结束判定的前提是线体**没有无敌(Invincibility)效果**。  
 
 |游戏结束判定|演示|
@@ -151,17 +156,138 @@ TUI游戏，一条像贪吃蛇的线。
 |头被炸弹炸到|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/gameover-hitbomb.gif)|
 |头被流石砸到|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/gameover-hitstones.gif)|
 
+</details>
 
 
 ## 游戏机制-分数计算  
 
-To be updated~
+咱这个游戏的分数计算其实挺简单的，就一个公式：  
+
+```尾巴长度``` × ```得分``` × ```难度等级``` × ```(1/10)``` = ```总分```  
+
+```难度等级```指的是在游戏配置文件和```DIFFICULTY```面板配置的难度，默认难度等级只有五个配置，也就是```1-5```。
+
+很有意思的是当尾巴长度为0时**总分也会相应为0**，所以要有分数必须得有一定的尾巴长度。
+
 
 ------
 
 ## 配置文件
 
-To be updated~  
+<details>
+<summary>展开阅读</summary>
+
+------
+
+在游戏初次运行时会在**同一目录下**生成配置文件```config.json```，咱从外层到内层注释一下：  
+
+* 外层  
+
+    ```json
+    {
+        "difficulty": 1, // 目前设定的难度等级，游戏里更改难度等级会自动更新这里的配置
+        "tps": 10, // ticks per second，每秒游戏计算(tick)的次数
+        "max_rank_len": 100, // 排行榜最多容纳多少项
+        "use_color": true, // 是否使用颜色，有的终端不支持颜色，需要用到这个选项
+        "diff_cfg": {...}, // 不同难度等级对应的游戏配置
+        "styles":{...} // 部分元素的显示样式
+    }
+    ```
+
+* 不同难度等级对应的游戏配置```diff_cfg```
+
+    ```json
+    {
+        "1": { // 难度等级为1的配置
+            "map_size": [50,15], // 地图大小(宽,高)，单位：格数
+            "short_sight": [7,5], // 近视时视野大小(宽,高)，单位：格数
+            "init_velo": 0.4, // 最开始线体行动的速度大小(最大值为1)，单位：格/tick
+            "triggers": { // 触发点相关配置
+                "summon": { // 生成触发点的概率(支持小数点后三位)
+                    //以下所有概率加起来要为1
+                    "normal": 0.5, // 普通点的生成概率
+                    "bonus": 0.05, // 奖励点的生成概率
+                    "accelerate": 0.08, // 加速点的生成概率  
+                    "decelerate": 0.02, // 减速点的生成概率
+                    "myopia": 0.05, // 近视点的生成概率
+                    "bomb": 0.04, // 炸弹点的生成概率
+                    "invincibility": 0.05, // 无敌点的生成概率
+                    "stones": 0.06, // 流石点的生成概率  
+                    "teleport": 0.15 // 传送点的生成概率
+                },
+                "last_for": { // 触发点对应的效果持续的时长(单位：秒)
+                    "accelerate": 5, // 加速效果持续时间
+                    "decelerate": 5, // 减速效果持续时间
+                    "myopia": 3, // 近视效果持续时间 
+                    "bomb": { 
+                    "flash": 1.5, // 炸弹闪烁时间 
+                    "explode": 0.5 // 爆炸持续时间
+                    },
+                    "invincibility": 6 // 无敌持续时间
+                }
+            }
+        },
+        ...
+    }
+    ```
+
+* 部分元素的显示样式```styles```  
+
+    ```json
+    {
+        "line": "#", // 线体的图案
+        "line_head_color": [11, 170, 239], // 头部的颜色
+        "line_body_color": [138, 220, 255], // 尾部的颜色
+        "area_border": "#", // 边界的图案
+        "border_color": [161, 161, 161], // 边界的颜色
+        "to_explode": "*", // 爆炸闪烁的图案
+        "to_explode_color": [255, 0, 0], // 爆炸闪烁的颜色
+        "explode": "*", // 爆炸粒子的图案
+        "explode_color": [255, 215, 15], // 爆炸粒子的颜色
+        "flow_stone": "o", // 流石的图案
+        "flow_stone_color": [199, 192, 173], // 流石的颜色
+        "triggers": { // 触发点样式配置
+            "normal": { // 普通点的样式
+                "pattern": "@", // 这个点的图案
+                "color": [255, 149, 0] // 这个点的颜色
+            },
+            "bonus": { // 奖励点的样式
+                "pattern": "+",
+                "color": [0, 224, 209]
+            },
+            "accelerate": { // 加速点的样式
+                "pattern": "+",
+                "color": [0, 235, 164]
+            },
+            "decelerate": { // 减速点的样式
+                "pattern": "+",
+                "color": [0, 235, 164]
+            },
+            "myopia": { // 近视点的样式
+                "pattern": "*",
+                "color": [16, 235, 0]
+            },
+            "bomb": { // 炸弹点的样式
+                "pattern": "*",
+                "color": [251, 255, 0]
+            },
+            "invincibility": { // 无敌点的样式
+                "pattern": "$",
+                "color": [255, 136, 0]
+            },
+            "stones": { // 流石点的样式
+                "pattern": "@",
+                "color": [255, 149, 0]
+            },
+            "teleport": { // 传送点的样式
+                "pattern": "$",
+                "color": [216, 245, 0]
+            }
+        }
+    }
+    ```
+
+</details>
 
 ## 课设说明  
 
