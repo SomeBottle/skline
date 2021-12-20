@@ -142,7 +142,16 @@ TUI游戏，一条像贪吃蛇的线。
 
 ## 游戏机制-局终判定
 
-To be updated~
+游戏结束判定的前提是线体**没有无敌(Invincibility)效果**。  
+
+|游戏结束判定|演示|
+|:---:|:---:|
+|头撞到墙壁|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/gameover-hitborder.gif)|
+|头撞到自己尾巴|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/gameover-hitself.gif)|
+|头被炸弹炸到|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/gameover-hitbomb.gif)|
+|头被流石砸到|![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/gameover-hitstones.gif)|
+
+
 
 ## 游戏机制-分数计算  
 
