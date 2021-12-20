@@ -67,7 +67,7 @@ class Game:
         cls.__tick_interval = round(1/tps, 4)  # 算出tick间隔，保留四位小数
         cls.__ins_list = {}  # 储存实例的列表
         cls.__task_list = task_list
-        cls.__sight_points = set()  # 储存近视情况下的视野点集合
+        cls.__sight_points = {(0, 0)}  # 储存近视情况下的视野点集合
         cls.tui = curses.initscr()  # 初始化curses，生成tui界面
 
     @classmethod

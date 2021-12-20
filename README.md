@@ -310,3 +310,7 @@ TUI游戏，一条像贪吃蛇的线。
     ![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/cmd-cn.png)  
 
 为了保证一致的显示，我决定就用英文了...
+
+## 声明  
+
+本项目仅供参考，请不要用于你自己的课设。写课设本质上是锻炼了自己的能力，一旦习惯了复制粘贴，你将会失去自己的思考。
