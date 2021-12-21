@@ -297,7 +297,7 @@ TUI游戏，一条像贪吃蛇的线。
 
 3. [使用的标准库和扩展库](https://github.com/SomeBottle/skline/blob/main/docs/Libraries.md)  
 
-4. [模块/类/函数小展示](https://github.com/SomeBottle/skline/blob/main/docs/ModuleClassFuncs.md)  
+4. [模块/类/函数小展示](https://github.com/SomeBottle/skline/blob/main/docs/ModulesClassesFuncs.md)  
 
 5. [游戏是怎么跑起来的](https://github.com/SomeBottle/skline/blob/main/docs/HowTheProgramWorks.md)  
 
