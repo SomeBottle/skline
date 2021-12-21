@@ -98,6 +98,11 @@ def start_game(self):  # 开始游戏
 
 因为```asyncio_game```方法是用```async```定义的，是一个异步函数。调用```asyncio.run(self.asyncio_game())```后，就创建了一个```协程```，并**阻塞当前语句**，而```asyncio_game```函数的语句就在这个协程里面被执行。  
 
+```python
+def start_game(self):  # 开始游戏
+    asyncio.run(self.asyncio_game())  # 开启事件循环
+```
+
 ------
 说到协程，协程其实是一个异步机制，我的理解是协程是一种**协作式的并发执行程序**。举个简单的例子：  
 
@@ -116,3 +121,23 @@ def start_game(self):  # 开始游戏
 这样下来我们**最少**只需要```4```分钟（几个任务中消耗的最长时间）就能完成这些，这就是协程并发的作用。
 
 ------
+
+现在```start_game()```已经被阻塞了，我们来到了```asyncio_game```方法里。首先我们创建了一个集合```task_list```来储存**待进行的并行任务**。紧接着实例化```Game```类为对象```game```，同时传入```task_list```的引用，以便游戏处理过程中**增加新的任务**。  
+
+```python
+async def asyncio_game(self):  # 开启并行任务
+    task_list = set()
+    game = Game(task_list)  # 向实例传入任务列表
+```
+
+接着先用```asyncio.create_task```将```game.start()```这个协程**封装**为任务Task（```async```修饰的方法可以被理解成为一个协程），然后将这个任务加入到任务列表里。
+
+```python
+task_list.add(asyncio.create_task(game.start()))
+```
+
+这之后咱使用```asyncio.wait```来**并发执行**```task_list```内的任务（同时引发```asyncio_game```方法暂时阻塞），并用```await```关键字暂时挂起```asyncio_game```方法，等待```task_list```的任务执行完成。  
+
+```python
+await asyncio.wait(task_list)
+```

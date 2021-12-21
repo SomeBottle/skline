@@ -60,7 +60,6 @@ class MenuView(BasicView):  # 派生出一个显示界面的类
         task_list = set()
         game = Game(task_list)  # 向实例传入任务列表
         task_list.add(asyncio.create_task(game.start()))
-        self.task_list = task_list
         await asyncio.wait(task_list)
         print('Concurrent tasks were completed.')
         self.game_end_choice = game.end_choice  # 把游戏结束后的值传出去
