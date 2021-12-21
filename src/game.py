@@ -478,7 +478,7 @@ class Trigger:  # 触发点类
         self.triggers = {}  # 用一个字典来储存触发点
         self.__line = Game.get_ins('line')  # 传递line实例
 
-    def check(self):  # 检查食物碰撞
+    def check(self):  # 检查触发点情况
         if len(self.triggers) == 0:  # 没有任何触发点
             map_w, map_h = Game.map_size
             map_area = map_w*map_h  # 地图面积
