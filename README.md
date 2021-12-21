@@ -291,11 +291,13 @@ TUI游戏，一条像贪吃蛇的线。
 
 ## 课设说明  
 
-1. [课程设计概述](https://github.com/SomeBottle/skline@main/blob/main/docs/AboutTheCourseProject.md)  
+1. [课程设计概述](https://github.com/SomeBottle/skline/blob/main/docs/AboutTheCourseProject.md)  
 
-2. [需求分析](https://github.com/SomeBottle/skline@main/blob/main/docs/RequirementsAnalysis.md)  
+2. [需求分析](https://github.com/SomeBottle/skline/blob/main/docs/RequirementsAnalysis.md)  
 
-3. [使用的标准库和扩展库](https://github.com/SomeBottle/skline@main/blob/main/docs/Libraries.md)  
+3. [使用的标准库和扩展库](https://github.com/SomeBottle/skline/blob/main/docs/Libraries.md)  
+
+4. [模块/类/函数小展示](https://github.com/SomeBottle/skline/blob/main/docs/moduleClassFuncs.md)  
 
 ## 为什么界面是英文
 
@@ -310,6 +312,10 @@ TUI游戏，一条像贪吃蛇的线。
     ![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/cmd-cn.png)  
 
 为了保证一致的显示，我决定就用英文了...
+
+## 感谢
+
+[数字绘](https://github.com/zxhm001/DataDraw) - 非常棒的开源结构图绘制工具，谢谢你们！  
 
 ## 声明  
 
