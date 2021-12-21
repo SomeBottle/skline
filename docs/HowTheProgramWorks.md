@@ -96,7 +96,7 @@ def start_game(self):  # 开始游戏
 
 在```start_game```方法里咱紧接着调用了```asyncio```库的方法```asyncio.run()```。这就要讲讲这里发生了什么了：  
 
-因为```asyncio_game```方法是用```async```定义的，是一个异步函数。调用```asyncio.run(self.asyncio_game())```后，就创建了一个```协程```，并**阻塞当前语句**，而```asyncio_game```函数的语句就在这个协程里面被执行。  
+因为```asyncio_game```方法是用```async```定义的，是一个异步函数。调用```asyncio.run(self.asyncio_game())```后，就调用了一个```协程```，并**阻塞当前语句**，而```asyncio_game```函数的语句就在这个协程里面被执行。  
 
 ```python
 def start_game(self):  # 开始游戏
