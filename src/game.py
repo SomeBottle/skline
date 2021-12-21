@@ -9,7 +9,7 @@ from resource import Res
 
 class Game:
     def __init__(self, task_list) -> None:
-        self.cls_init(task_list=task_list)  # 重初始化类属性
+        self.__cls_init(task_list=task_list)  # 重初始化类属性
         curses.noecho()  # 无回显模式
         self.tui.nodelay(True)  # getch不阻塞
         self.tui.keypad(True)  # 支持特殊按键
@@ -45,7 +45,7 @@ class Game:
     # 为什么要全写成类属性呢，这是为了开放公共属性供Line,Trigger类实例使用，便于管理
 
     @classmethod
-    def cls_init(cls, task_list):
+    def __cls_init(cls, task_list):
         all_cfg = Res().get_config()  # 获得游戏配置文件
         difficulty = str(all_cfg['difficulty'])  # json中数字键名都会转换为字符串
         game_cfg = all_cfg['diff_cfg'][difficulty]  # 读取对应困难度的游戏配置
@@ -67,7 +67,7 @@ class Game:
         cls.__tick_interval = round(1/tps, 4)  # 算出tick间隔，保留四位小数
         cls.__ins_list = {}  # 储存实例的列表
         cls.__task_list = task_list
-        cls.__sight_points = {(0, 0)}  # 储存近视情况下的视野点集合
+        cls.__sight_points = set()  # 储存近视情况下的视野点集合
         cls.tui = curses.initscr()  # 初始化curses，生成tui界面
 
     @classmethod
@@ -75,7 +75,7 @@ class Game:
         return points & cls.map_points
 
     @classmethod
-    def reset_score(cls):  # 重置分数
+    def __reset_score(cls):  # 重置分数
         cls.__score = 0
 
     @classmethod
@@ -88,7 +88,7 @@ class Game:
         cls.__score += num
 
     @classmethod
-    def create_border(cls):  # 创建边界点坐标
+    def __create_border(cls):  # 创建边界点坐标
         map_w, map_h = map(lambda x: x+1, cls.map_size)  # 获得地图大小
         border_points = set()  # 储存边框的点坐标
         for w in range(map_w+1):
@@ -98,7 +98,7 @@ class Game:
         cls.border_points = border_points
 
     @classmethod
-    def create_area(cls):
+    def __create_area(cls):
         map_w, map_h = map(lambda x: x+3, cls.map_size)  # 获得地图大小
         # 根据地图大小创建游戏区域，要比地图大小稍微大一点
         game_area = curses.newwin(map_h, map_w, 1, 1)
@@ -109,11 +109,11 @@ class Game:
         cls.msg_area = msg_area
 
     @classmethod
-    def del_area(cls):
+    def __del_area(cls):
         del cls.game_area, cls.msg_area
 
     @classmethod
-    def reg_ins(cls, name, ins):
+    def __reg_ins(cls, name, ins):
         cls.__ins_list[name] = ins
 
     @classmethod
@@ -125,7 +125,7 @@ class Game:
         cls.short_sighted = toggle
 
     @classmethod
-    def get_sight_info(cls):  # 获得myopia相关方法需要的属性
+    def __get_sight_info(cls):  # 获得myopia相关方法需要的属性
         short_sight = cls.game_cfg['short_sight']
         sight_w, sight_h = short_sight
         line_ins = cls.get_ins('line')  # 取出ins实例
@@ -135,7 +135,7 @@ class Game:
     @classmethod
     def update_myopia_sight(cls):  # 生成近视区域，搭配Line.move方法
         if cls.short_sighted:
-            x, y, sight_w, sight_h = cls.get_sight_info()
+            x, y, sight_w, sight_h = cls.__get_sight_info()
             l_t_x = x - (sight_w-1)//2
             l_t_y = y - (sight_h-1)//2
             # 得到视野区所有坐标点
@@ -153,7 +153,7 @@ class Game:
         else:  # 近视了就特殊打印
             sight_points = cls.__sight_points
             if (pos_x, pos_y) in sight_points:  # 如果要打印的内容在视野区
-                x, y, sight_w, sight_h = cls.get_sight_info()
+                x, y, sight_w, sight_h = cls.__get_sight_info()
                 map_w, map_h = cls.map_size  # 获得地图尺寸
                 x_ratio = map_w//sight_w  # x方向比例
                 y_ratio = map_h//sight_h  # y方向比例
@@ -175,7 +175,7 @@ class Game:
                     bx, by = pt
                     win_obj.addstr(by, bx, string, *args)
 
-    def flash_fx(self, content):
+    def __flash_fx(self, content):
         for i in range(5):
             self.tui.erase()
             offset = random.randrange(0, len(content)-1)
@@ -185,17 +185,17 @@ class Game:
             time.sleep(0.1)
         self.tui.clear()
 
-    def count_down(self):  # 游戏开始前的倒计时
+    def __count_down(self):  # 游戏开始前的倒计时
         for i in ('ready', '3', '2', '1'):
             self.tui.erase()  # 清理残余界面
             text = Res().art_texts(i)[2]
-            self.flash_fx(text)  # 做个故障风动画
+            self.__flash_fx(text)  # 做个故障风动画
             # 打印倒计时Res().art_texts('3')[2])
             self.tui.addstr(1, 5, Res.x_offset(text, 5))
             self.tui.refresh()  # 刷新窗口，输出addstr的内容
             time.sleep(0.2)  # 主界面
 
-    def draw_flow_stones(self):  # 绘制流石
+    def __draw_flow_stones(self):  # 绘制流石
         if len(self.flow_stones) <= 0:  # 没有流石就不多费力气
             return False
         flow_stone = self.styles['flow_stone']
@@ -205,19 +205,19 @@ class Game:
             x, y = pt
             self.printer(y, x, flow_stone, self.color_pair(22))
 
-    def draw_border(self):  # 根据边界点坐标绘制游戏区域边框
+    def __draw_border(self):  # 根据边界点坐标绘制游戏区域边框
         pattern = self.styles['area_border']  # 读取边框样式
         for point in self.border_points:
             x, y = point
             self.printer(y, x, pattern, self.color_pair(2))
 
-    def draw_score(self):
+    def __draw_score(self):
         line_ins = self.get_ins('line')
         score_text = f'SCORE: {self.__score} '
         len_text = f'TAIL LEN: {len(line_ins.attrs["body_pos"])}'
         self.msg_area.addstr(0, 0, score_text+' / '+len_text)
 
-    def calc_score(self):  # 计算出最终得分，返回(分数,长度,总得分)
+    def __calc_score(self):  # 计算出最终得分，返回(分数,长度,总得分)
         difficulty = self.all_cfg['difficulty']*0.1
         line_ins = self.get_ins('line')
         body_len = len(line_ins.attrs['body_pos'])  # 尾巴长度
@@ -225,9 +225,9 @@ class Game:
         multiply = score*body_len*difficulty
         return (score, body_len, round(multiply, 2))
 
-    def over(self):  # 游戏结束
+    def __over(self):  # 游戏结束
         res_ins = Res()
-        self.cancel_tasks()  # 清除并行任务
+        self.__cancel_tasks()  # 清除并行任务
         self.tui.erase()  # 擦除内容
         self.game_area.erase()  # 擦除游戏区域内容
         text_h, text_w, over_text = res_ins.art_texts(
@@ -237,7 +237,7 @@ class Game:
         pattern1 = '{:#^' + str(text_w) + '}'
         pattern2 = '{: ^' + str(text_w) + '}'
         result_text = pattern1.format(' R E S U L T ')
-        score, tail_len, total = map(str, self.calc_score())
+        score, tail_len, total = map(str, self.__calc_score())
         total_score = float(total)  # 总成绩
         score_item = pattern2.format('SCORE: ' + score)
         tail_item = pattern2.format('TAIL LENGTH: '+tail_len)
@@ -259,22 +259,22 @@ class Game:
             elif recv in (ord('b'), ord('B')):  # 按下B/b
                 choice = 'menu'
                 break
-        self.del_area()  # 删除游戏区域
+        self.__del_area()  # 删除游戏区域
         curses.endwin()
         self.end_choice = choice  # 传值出去
 
-    def cancel_tasks(self):  # 取消所有并行任务
+    def __cancel_tasks(self):  # 取消所有并行任务
         for task in self.__task_list:
             task.cancel()
 
     async def start(self):  # 开始游戏！
         tick_interval = self.__tick_interval  # 获得tick间隔时间
-        self.count_down()  # 先调用倒计时
-        self.reset_score()  # 重置分数
-        self.create_area()  # 创建游戏绘制区域
-        self.create_border()  # 创建边界点坐标
+        self.__count_down()  # 先调用倒计时
+        self.__reset_score()  # 重置分数
+        self.__create_area()  # 创建游戏绘制区域
+        self.__create_border()  # 创建边界点坐标
         line_ins = Line()  # 实例化线体
-        Game.reg_ins('line', line_ins)  # 在Game类上注册（保留）实例
+        Game.__reg_ins('line', line_ins)  # 在Game类上注册（保留）实例
         trg_ins = Trigger()  # 实例化触发点，并和线体实例关联
         while True:  # 开始游戏动画
             tick_start = time.time()  # 本次tick开始时间
@@ -282,9 +282,9 @@ class Game:
             self.msg_area.erase()
             self.game_area.erase()  # 擦除游戏区域内容
             line_ins.draw_line()  # 绘制线体
-            self.draw_border()  # 绘制游戏区域边界
-            self.draw_score()  # 绘制分数
-            self.draw_flow_stones()  # 绘制流石
+            self.__draw_border()  # 绘制游戏区域边界
+            self.__draw_score()  # 绘制分数
+            self.__draw_flow_stones()  # 绘制流石
             line_ins.draw_msg()  # 绘制信息
             trg_ins.check()
             trg_ins.draw()
@@ -302,7 +302,7 @@ class Game:
                 await asyncio.sleep(tick_interval-tick_take)
         curses.flash()  # 撞上什么了就闪屏一下
         await asyncio.sleep(2)  # 游戏结束后凝固两秒
-        self.over()
+        self.__over()
 
 
 class Line:  # 初始化运动线
@@ -637,6 +637,7 @@ class FxMyopia(FxBase):  # 近视点效果
         last_for_cfg = self.last_for_cfg
         last_for = last_for_cfg[name]
         status = [name, last_for]
+        Game.update_myopia_sight()  # 触发近视点的时候更新一次视野区域
         Game.add_score()  # 加分
 
         def keep():
