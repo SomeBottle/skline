@@ -299,6 +299,8 @@ TUI游戏，一条像贪吃蛇的线。
 
 4. [模块/类/函数小展示](https://github.com/SomeBottle/skline/blob/main/docs/ModuleClassFuncs.md)  
 
+5. [游戏是怎么跑起来的](https://github.com/SomeBottle/skline/blob/main/docs/HowTheProgramWorks.md)  
+
 ## 为什么界面是英文
 
 使用curses在终端输出中文得要解决一下编码的问题，这个其实还挺好办。但是吧，不同终端对中文显示的支持挺奇怪的：
