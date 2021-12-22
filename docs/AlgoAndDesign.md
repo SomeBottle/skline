@@ -202,3 +202,69 @@ def list_maker(self, chunk, start=0):
 总的来说，这个分页的原理还是很简单的ヽ(✿ﾟ▽ﾟ)ノ。  
 
 ## game.py
+
+![002-2021-12-22](https://cdn.jsdelivr.net/gh/cat-note/bottleassets@latest/img/002-2021-12-22.png)
+
+哎嘛，这节要讲的东西可就有点多了！  
+
+* **基本思想：点集合和坐标**  
+
+    可以说下面的算法和设计多多少少都是围绕着**点集合**和**坐标**展开的。  
+
+    这里写几个基本的**点集合**:  
+
+    * **```Game.border_points```**  
+
+        储存所有的边界绘制点，在```Game.__create_border()```中被初始化：  
+
+        ```python
+        @classmethod
+        def __create_border(cls):  # 创建边界点坐标
+            map_w, map_h = map(lambda x: x+1, cls.map_size)  # 获得处理过的地图宽高
+            border_points = set()  # 储存边框的点坐标
+            for w in range(map_w+1):
+                border_points.update({(w, 0), (w, map_h)})
+            for h in range(map_h+1):  # 让竖直方向的边框长一点
+                border_points.update({(0, h), (map_w, h)})
+            cls.border_points = border_points
+        ```
+
+        初始化的时候首先取出了记录了地图宽高的元组```map_size```，然后在```map()```函数映射处理宽高共同```+1```后把宽高各加一赋值给```map_w```，```map_h```。  
+
+        边框点是从```(0,0)```绘制到```(map_w,map_h)```的。我利用了两次```for```循环来实现这个过程，第一次保持纵坐标不变，改变横坐标从```0```到```map_w```：  
+
+        ![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/create_border-1.png)  
+
+        第二次则保持横坐标不变，改变纵坐标从```0```到```map_h```：
+
+        ![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/create_border-2.png)  
+
+        最终形成的点如下，留出了**原本的地图区域**：
+
+        ![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/create_border-3.png)  
+
+    * **```Game.map_points```**  
+
+        储存地图中的所有坐标，在```Game.__cls_init()```中被初始化，可以说是所有游戏中**点处理**的基础。  
+
+        ```python
+        map_w, map_h = map_size # 获得真正的地图宽高
+        # 根据地图大小生成所有的坐标
+        cls.map_points = {(xi, yi) for xi in range(1, map_w+1) for yi in range(1, map_h+1)}
+        ```
+
+        ```map_points```点集合的生成我直接用了个**集合推导式**，```x```坐标从```1```到```map_w```，```y```坐标从```1```到```map_h```。  
+
+        生成的```map_points```点集合表示的就是上面```border_points```**示例图**中绿色标出来的区域。
+
+    * **```Game.explode_points```**
+
+        **临时储存**爆炸时**代表爆炸范围**的点集合，由效果类```FxBomb```的```apply()```方法控制，用于和**线体**产生交互。  
+
+    * **```Game.__sight_points```**  
+
+        储存**近视模式**下的点集合，代表角色近视时**能看到的区域（也就是视野）**，这和近视(```Myopia```)效果的处理**息息相关**，后面会细说。  
+
+    * **```Game.flow_stones```**
+
+        储存地图中的**流石**点集合，代表地图中**流石**的位置，由效果类```FxStones```的```apply()```方法控制，用于和**线体**产生交互。  

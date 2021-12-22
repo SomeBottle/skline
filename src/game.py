@@ -52,10 +52,10 @@ class Game:
         tps = all_cfg['tps']  # 获得游戏tps
         use_color = all_cfg['use_color']
         map_size = game_cfg['map_size']
-        x, y = map_size
+        map_w, map_h = map_size
         # 根据地图大小生成所有的坐标
-        cls.map_points = {(xi, yi) for xi in range(1, x+1)
-                          for yi in range(1, y+1)}
+        cls.map_points = {(xi, yi) for xi in range(1, map_w+1)
+                          for yi in range(1, map_h+1)}
         cls.explode_points = set()  # 爆炸点
         cls.flow_stones = set()  # 流石点
         cls.short_sighted = False  # 是否近视
