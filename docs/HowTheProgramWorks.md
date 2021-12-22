@@ -321,4 +321,172 @@ while True:  # 开始游戏动画
             self.printer(y, x, flow_stone, self.color_pair(22))
     ```
 
+* 调用```line_ins```线体实例的```draw_msg()```方法在**消息区域**绘制线体的效果信息（效果是碰到触发点后能得到的）  
 
+    ```python
+    def draw_msg(self):  # 绘制线体相关信息，位于游戏区域下方
+        line = 1 # 颜色代号计数器
+        for fx in self.effects.values(): # 取出所有效果
+            color_num = line+40  # 41号往后用于消息颜色
+            trg_type = fx[0]  # 该触发点的类型
+            trg_style = Game.styles['triggers'][trg_type]  # 获得触发点样式配置
+            Game.set_color(color_num, trg_style['color'])  # 用触发点的颜色来打印对应的效果文字
+            remain = f' - {fx[1]}s' if fx[1] > 0 else '' # 效果信息分计时器和挂起两种。挂起的就不显示倒计时了，2s后自动撤下
+            text = self.fx_dict[trg_type]+remain # 要打印的内容
+            Game.msg_area.addstr(line, 0, text, Game.color_pair(color_num))
+            line += 1
+    ```
+
+* 调用```trg_ins```触发点实例的```check()```方法检查是否有触发点，**没有**就创建触发点，**有的话**就判断线体是否碰撞了触发点。  
+
+    ```python
+    def check(self):  # 检查触发点情况
+        if len(self.triggers) == 0:  # 没有任何触发点
+            map_w, map_h = Game.map_size # 取出地图宽高
+            map_area = map_w*map_h  # 地图面积
+            max_trigger_num = floor(map_area/300)+1  # 一次生成的最多的触发点数量
+            trigger_num = random.randint(1, max_trigger_num) # 本次生成的触发点数量
+            for i in range(trigger_num):
+                self.make()  # 生成触发点
+        else:  # 有触发点就检测碰撞
+            # 如果不这样做，在循环过程中对字典进行del操作时会有异常抛出
+            trg_items = tuple(self.triggers.items())
+            for ind, tg in trg_items:  # 遍历触发点列表
+                t_x, t_y = tg['pos']  # 获得触发点坐标
+                # 两坐标相减，如果绝对值<1(格)，就说明在同一块区域，碰撞上了
+                # 判断水平方向碰撞
+                if self.__line.hit(t_x, t_y):
+                    trg_type = tg['type']  # 获得触发点类型
+                    del self.triggers[ind] # 碰到后就删除这个触发点
+                    # 根据触发点效果创建异步协程任务
+                    Game.add_task(self.__trg_async(trg_type, (t_x, t_y)))
+    ```
+------
+
+### 触发点相关的工作  
+
+* **```make```方法**
+
+    在上面代码中，如果没有触发点会调用```trg_ins```自身的```make()```方法创建触发点，我们先来看看这个方法：  
+
+    ```python
+    def make(self):  # 做饭...啊不，是随机放置触发点的方法
+        ava_points = self.ava_points()
+        sub = len(self.triggers)  # 获得点坐标储存下标
+        summon_config = Game.game_cfg['triggers']['summon']  # 获得触发点生成比率字典
+        chosen_type = Res.ratio_rand(summon_config)  # 使用ratiorand方法来随机生成的类型
+        # 生成触发点新出现的坐标
+        new_point = {
+            "type": chosen_type,
+            "pos": random.choice(ava_points)
+        }
+        self.triggers[sub] = new_point  # 储存创建的新触发点
+    ```
+
+    ```make()```方法首先还是会调用一个```trg_ins```自身的方法```ava_points()```，这个方法会返回一个**地图中还可以用的点坐标集合**（具体实现我在后面一节再讲）。  
+
+    随后从配置文件中读出**当前难度**下**各触发点的生成比率```字典```**，调用```resource.py```模块的```Res.ratio_rand```根据比率来**随机选择**当前生成的触发点的**种类**。  
+
+    接着靠着```random.choice()```从**可用点**中随机选择一个点用于**放置触发点**。  
+
+* **碰撞线体后的操作**  
+
+    当**线体碰撞到某个触发点**后，程序把一个新的**协程任务**加入到了```task_list```里：  
+
+    ```python
+    Game.add_task(self.__trg_async(trg_type, (t_x, t_y)))
+
+    # add_task是Game的类方法 ↓
+    @classmethod
+    def add_task(cls, coroutine):
+        new_task = asyncio.create_task(coroutine)
+        cls.__task_list.add(new_task)
+    ```
+
+    这里也是**为什么我要采用并发机制运行游戏**了。在游戏主循环持续进行的情况下，我还要保证触发点这边的运算处理是**持续进行的**。如果不用并发的话势必会影响到游戏主循环，可能会导致阻塞。而采用了协程并发机制，**他们能够互相协作进行运算**，高效率利用资源。  
+
+    在把```__trg_async```这个协程任务加入到```task_list```后，现在任务列表里就有```触发点任务```和```game.start()```这个主循环任务了，他们以协程的形式并发进行。  
+
+    ```__trg_async```方法其实就是个**转接处（接口）**，根据传入的触发点类型```trg_type```来调用不同**效果类的apply方法**来实现**给线体增加效果**。  
+
+    ```python
+    async def __trg_async(self, trg_type, pos):  # 触发点异步处理分发
+        trg_funcs = {
+            'normal': FxNormal, # 值都是效果的类
+            'bonus': FxBonus,
+            'accelerate': FxAclrt,
+            'decelerate': FxDclrt,
+            'myopia': FxMyopia,
+            'bomb': FxBomb,
+            'invincibility': FxIvcb,
+            'stones': FxStones,
+            'teleport': FxTlpt
+        }
+        # 应用效果，传递(触发点种类,位置,Trigger实例)
+        await trg_funcs[trg_type](trg_type, pos, self).apply() # 实例化效果类并调用对象的apply()方法
+    ```
+
+    这些效果类由基类```FxBase```派生得到，这样写是为了方便维护，同时所有效果类都能调用到```hang_fx```（线体效果消息处理）这个方法：  
+
+    ```python
+    async def hang_fx(self, status, pop=False, extra_func=False, *args):
+        effects = self.line.effects
+        sub = time.time()  # 插入的下标
+        # status储存着[效果名,持续时间]的引用
+        effects[sub] = status # 将效果附加到effects里，这些效果会由上面的line_ins.draw_msg()打印出来
+        last_for, minus = (status[1], 1) if not pop else (2, 0) # pop=True代表是弹出模式的消息，只显示两秒就被撤掉
+        for i in range(last_for):  # 持续last_for秒
+            status[1] -= minus # 倒计时
+            if extra_func:
+                extra_func(*args) # 如果有额外函数，就执行额外的函数
+            await asyncio.sleep(1)
+        del effects[sub]  # 删除效果
+    ```
+
+    比如**线体碰到了触发点**，这个触发点的类型是```myopia```，通过```__trg_async```会调用```FxMyopia```类实例对象的```apply()```方法：  
+
+    ```python
+    class FxMyopia(FxBase):  # 近视点效果
+        async def apply(self):
+            name = self.trg_type # 取出触发点（效果）类型
+            last_for_cfg = self.last_for_cfg # 得到效果持续时间的配置
+            last_for = last_for_cfg[name] # 取出该效果持续的时间
+            status = [name, last_for] # 创建status，用于消息
+            Game.update_myopia_sight()  # 触发近视点的时候更新一次视野区域
+            Game.add_score()  # 加分
+
+            def keep():
+                Game.myopia(True)  # 开启近视
+            await self.hang_fx(status, False, keep) # 挂起消息的同时调用keep方法，保持多个近视效果的时长能同时起效
+            Game.myopia(False) # hang_fx执行完毕，关闭近视
+    ```
+
+    可以说```apply()```是**所有效果类**的一个接口，通过调用```apply```能开始对于**线体对应效果**的运算。  
+
+    在```hang_fx```计算消息倒计时时会暂时挂起来当前协程，让```task_list```中其他协程继续执行。这里就有必要再说说```asyncio```的调度了：  
+
+* **利用```asyncio```进行协程调度**  
+
+    协程之所以是一种**并发机制**，归功于**其中的互相调度**。  
+
+    之前```view.py```模块的中```asyncio_game()```方法通过把```game.start()```协程任务加入任务列表```task_list```中并发运行来启动游戏程序。  
+
+    在上面的触发点碰撞处理中程序也将```__trg_async```方法加入到了```task_list```中执行。  
+
+    ```game.start()```和```__trg_async```都被```async```关键字定义，是异步函数，返回的是```协程```。  
+
+    很容易能注意到，除了```async```，还有个常见的关键字是```await```。```await```起的就是挂起协程的作用。  
+
+    游戏主循环每次运算完毕后会有一条语句```await asyncio.sleep(等待时间)```，这个时候```game.start()```会在**这里暂时被挂起**，**不再往下**进行。```asyncio```便会自动调度，运行下一个**没有被挂起的任务**。  
+
+    ```python
+    await asyncio.sleep(tick_interval-tick_take)
+    ```
+
+    而此时```__trg_async```正好在任务列表里，是**待执行任务**，此时asyncio便会执行```__trg_async```。  
+
+    接着```__trg_async```被调用，进而调用**效果类实例的异步方法```apply()```**时，又会使用到```await```，代表```__trg_async```也被暂时挂起，等待```apply()```方法**异步**执行完毕。  
+
+    ```__trg_async```在任务列表```task_list```里被挂起后，asyncio又会继续调度，```game.start()```里的```asyncio.sleep()```执行完毕后就会**取消挂起**，继续执行```game.start()```剩余的语句。如此往返，任务列表```task_list```里的协程任务互相调度实现程序并发进行。  
+
+------
