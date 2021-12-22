@@ -149,6 +149,56 @@
 
     值得注意的是**所有的比率加起来要为```1```**，不然可能会返回```False```。  
 
-    
 
-    
+## view.py  
+
+老实说这个模块没有很多值得说说的算法和设计，我就写一下```RankingView```类实例的```show_panel()```方法里的分页吧。  
+
+```python
+def show_panel(self):
+    rank_list = Res().get_ranking()['rank_list']
+    title, choice_session = self.create_win(Res().art_texts('ranking'))
+    chunked = []
+    each_chunk = 6
+    for i in range(0, len(rank_list), each_chunk):
+        the_chunk = rank_list[i:i+each_chunk]
+        chunked.append(the_chunk)  # 分片
+    ...
+    current_page = 0
+    max_page = len(chunked)-1
+```
+
+首先获得整张排名表```rank_list```，这是一个二维列表，列表中的每一项形如```[排名登记时间,总分]```，整个列表已经按**降序**排列。  
+
+我设定每页展示```6```项，也就是```each_chunk=6```。接下来就需要把这么多项**以6个一组**分成多片(页)。  
+
+于是我们以列表长度为```range```尾部、以```0```为range开头、以```each_chunk```为步，对这样的```range```进行遍历。然后采用**列表分片**，以```i```为开始下标，以```i+each_chunk```为结束下标，从```rank_list```中切出一片储存到```chunked```列表中。  
+
+遍历完成后，```chunked```列表中有几个元素，就代表有几页，即```max_page=len(chunked)-1```
+
+之后进入Ranking界面主循环，程序会调用```list_maker```方法根据当前块```current_chunk```和开始的位置```start_place```生成待绘制的排名单，然后打印在屏幕上。  
+
+当前块其实就是以**标记当前页码的变量```current_page```**为下标，从```chunked```中取出对应**分片(页)**。```start_page```标记**当前块首个排名项**在```rank_list```中下标开始的地方。  
+
+在```list_maker()```中，在```start_page+1```的基础上再加上**当前项目在当前分片中的下标**，就是当前的排名了：  
+
+```python
+def list_maker(self, chunk, start=0):
+    list_str = 'PLACE             TIME             SCORE\n'
+    for key, item in enumerate(chunk):
+        place = start+key+1
+        date, score = item
+        list_str += f'{place}        {date}        {score}\n'
+    list_str += '\nPress (D) for Next Page, (A) for Prev Page'
+    return list_str
+```
+
+比如我```current_page=1```，代表是第二页（第一页下标为0），分页总共有```5```页(下标```0-4```)，  
+
+那么当前分页中**有```each_chunk=6```项**，下标是```0-5```，其中下标为```0```的项在```rank_list```中开始的下标是```current_page*each_chunk=6```，但我们知道，这其实是第```7```项！  
+
+于是在```list_maker```处理**当前分页**时，当前页面显示的第一项是第```start+1+key=6+1+0=7```名，第二项则是第```8```名，第三项就是第```9```名...  
+
+总的来说，这个分页的原理还是很简单的ヽ(✿ﾟ▽ﾟ)ノ。  
+
+## game.py
