@@ -126,7 +126,7 @@ def start_game(self):  # 开始游戏
 
 ------
 
-现在```start_game()```已经被阻塞了，我们来到了```asyncio_game```方法里。首先我们创建了一个集合```task_list```来储存**待进行的并行任务**。紧接着实例化```Game```类为对象```game```，同时传入```task_list```的引用，以便游戏处理过程中**增加新的任务**。  
+现在```start_game()```已经被阻塞了，我们来到了```asyncio_game```方法里。首先我们创建了一个集合```task_list```来储存**待进行的并行任务**。紧接着实例化```game.py```模块中的```Game```类为对象```game```，同时传入```task_list```的引用，以便游戏处理过程中**增加新的任务**。  
 
 ```python
 async def asyncio_game(self):  # 开启并行任务
@@ -226,9 +226,11 @@ time.sleep(0.2)  # 主界面
 
 * 将触发点类```Trigger```实例化为对象```trg_ins```
 
+```Line```类实例化的时候有生成一个**包含随机位置坐标的线体属性**，这个后面一节再说~  
+
 接下来就进入**游戏计算**部分了，本质上是个```while```循环。  
 
-## 开始游戏运算  
+## 开始游戏主循环  
 
 ```python
 while True:  # 开始游戏动画
@@ -477,7 +479,7 @@ while True:  # 开始游戏动画
 
     很容易能注意到，除了```async```，还有个常见的关键字是```await```。```await```起的就是挂起协程的作用。  
 
-    游戏主循环每次运算完毕后会有一条语句```await asyncio.sleep(等待时间)```，这个时候```game.start()```会在**这里暂时被挂起**，**不再往下**进行。```asyncio```便会自动调度，运行下一个**没有被挂起的任务**。  
+    游戏主循环每次运算完毕后会有一条语句```await asyncio.sleep(等待时间)```，这个时候```game.start()```会在**这里暂时被挂起**，**不再往下**进行，让出控制权。```asyncio```便会自动调度，运行下一个**没有被挂起的任务**。  
 
     ```python
     await asyncio.sleep(tick_interval-tick_take)
@@ -485,8 +487,219 @@ while True:  # 开始游戏动画
 
     而此时```__trg_async```正好在任务列表里，是**待执行任务**，此时asyncio便会执行```__trg_async```。  
 
-    接着```__trg_async```被调用，进而调用**效果类实例的异步方法```apply()```**时，又会使用到```await```，代表```__trg_async```也被暂时挂起，等待```apply()```方法**异步**执行完毕。  
+    接着```__trg_async```被调用，进而调用**效果类实例的异步方法```apply()```**时，又会使用到```await```，代表```__trg_async```也被暂时挂起，等待```apply()```方法**异步**执行完毕，让出控制权。  
 
     ```__trg_async```在任务列表```task_list```里被挂起后，asyncio又会继续调度，```game.start()```里的```asyncio.sleep()```执行完毕后就会**取消挂起**，继续执行```game.start()```剩余的语句。如此往返，任务列表```task_list```里的协程任务互相调度实现程序并发进行。  
 
 ------
+
+接着说```game.start()```主循环里的语句：  
+
+* 调用```trg_ins```触发点实例的```draw()```方法来绘制```make()```创建的触发点。
+
+    ```python
+    def draw(self):  # 输出触发点和相关信息
+        for key, tg in self.triggers.items(): # 遍历触发点
+            trg_type = tg['type']  # 该触发点的类型
+            trg_style = Game.styles['triggers'][trg_type]  # 获得对应的样式配置
+            color_num = key+30 # 颜色代号
+            Game.set_color(color_num, trg_style['color'])  # 30号往后颜色对用于触发点
+            x, y = tg['pos'] # 获得触发点坐标
+            Game.printer(y, x, trg_style['pattern'],Game.color_pair(color_num)) #绘制触发点
+    ```  
+
+至此主循环中的绘制部分就进行完毕了，通过窗口的```refresh()```方法将绘制的内容**输出到屏幕中**。  
+
+在这之后：  
+
+* 调用```line_ins```的```move()```方法来计算线体的移动后位置，这个有点复杂，咱就放在后面一节说了...  
+
+* 调用```line_ins```的```control()```方法来接收用户控制，主要原理还是利用了```curses```窗口的```getch()```方法（在之前我们已经设定```game_area.nodelay(True)```，也就是```game_area.getch()```不阻塞）：  
+
+    ```python
+    def control(self):
+        attrs = self.attrs  # 获得角色（线体）属性
+        vx, vy = attrs['velo']  # 解构赋值x,y速度
+        dx, dy = attrs['direction']  # 解构赋值x,y的方向
+        recv = Game.game_area.getch()  # 获取用户按键，不阻塞
+        ctrls = { # 控制相关的按键ASCII码值
+            'L': (ord('a'), ord('A'), curses.KEY_LEFT),
+            'R': (ord('d'), ord('D'), curses.KEY_RIGHT),
+            'U': (ord('w'), ord('W'), curses.KEY_UP),
+            'D': (ord('s'), ord('S'), curses.KEY_DOWN)
+        }
+        if recv in ctrls['L']+ctrls['R']: # 按下左右键
+            # 如果vx为0就调换一下两个速度，让速度沿x方向
+            vx, vy = (vy, vx) if vx <= 0 else (vx, vy)
+        elif recv in ctrls['U']+ctrls['D']: # 按下上下键
+            # 如果vy为0就调换一下两个速度，让速度沿y方向
+            vy, vx = (vx, vy) if vy <= 0 else (vy, vx)
+
+        if recv in ctrls['L']:  # 用户按下左键
+            dx = -1  # 调转水平行进方向
+        elif recv in ctrls['R']:  # 用户按下右键
+            dx = 1  # 调转水平行进方向
+        elif recv in ctrls['U']:  # 用户按下上键
+            dy = -1  # 调转竖直行进方向（向下为Y轴正方向）
+        elif recv in ctrls['D']:  # 用户按下下键
+            dy = 1
+        # 更新移动指示
+        self.attrs['velo'] = (vx, vy) # 移动速度
+        self.attrs['direction'] = (dx, dy) # 移动速度的方向
+    ```
+
+* 最后调用```line_ins```的```impact()```方法来判断是否有**致命碰撞**发生，如果发生了就break，**跳出游戏主循环导致游戏结束**。  
+
+    ```python
+    def impact(self):  # 碰撞判断
+        attrs = self.attrs
+        if attrs['invincibility']:  # 如果无敌就直接跳过
+            return False
+        max_x, max_y = self.__map_w, self.__map_h  # 解构赋值最大的x,y坐标值
+        x, y = attrs['head_pos']
+        result = False  # False代表未碰撞，True代表有碰撞
+        judge_border_x = x >= 1 and x < max_x+1
+        judge_border_y = y >= 1 and y < max_y+1
+        floored = (floor(x), floor(y))
+        # 第一步先判断是否碰到边框
+        if not (judge_border_x and judge_border_y):
+            result = True
+        # 第二步判断是不是碰到自己了
+        elif floored in attrs['body_pos']:
+            result = True
+        # 第三步判断是不是被炸到了
+        elif floored in Game.explode_points:
+            result = True
+        # 第四步判断是不是被流石撞到了
+        elif floored in Game.flow_stones:
+            result = True
+        return result
+
+    # 游戏主循环中↓
+    if line_ins.impact():  # 判断是否有碰撞
+        break
+    ```
+
+当线体触发了[**局终条件**](https://github.com/SomeBottle/skline#%E6%B8%B8%E6%88%8F%E6%9C%BA%E5%88%B6-%E5%B1%80%E7%BB%88%E5%88%A4%E5%AE%9A)，就会跳出循环，进行收尾工作。  
+
+## 游戏主循环结束  
+
+跳出循环后首先迎来的是```curses.flash()```，让线体死亡时画面闪烁一下：  
+
+![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/gameover-hitborder.gif)  
+
+死亡后让画面**凝固2秒**，也就是```await```一下```asyncio.sleep(2)```。  
+
+等待2秒后执行结束游戏的程序```game.over()```： 
+
+* 实例化```resource.py```模块中的```Res```类为对象```res_ins```，以备使用。  
+
+* 调用```cancel_tasks()```取消```task_list```中正在进行的并行任务（很有意思的是，当前程序**也是运行在任务列表中**的，但并不会被取消，我暂且当这个是个特性了）：
+
+    ```python
+    def __cancel_tasks(self):  # 取消所有并行任务
+        for task in self.__task_list:
+            task.cancel()
+    ```
+* 擦除```curses```窗口的内容，调用```tui.erase()```和```game_area.erase()```  
+
+* 接下来绘制游戏结束的界面，其中调用了```calc_score()```方法来计算总分：  
+
+    ```python
+     text_h, text_w, over_text = res_ins.art_texts(
+            'gameover')  # 获得艺术字GAME OVER
+    self.tui.addstr(1, 1, Res.x_offset(over_text, 1))
+    self.msg_area.mvwin(text_h+1, 1)  # 移动一下msg区的位置
+    pattern1 = '{:#^' + str(text_w) + '}' # 标题格式化模式
+    pattern2 = '{: ^' + str(text_w) + '}' # 成绩栏格式化模式
+    result_text = pattern1.format(' R E S U L T ')
+    score, tail_len, total = map(str, self.__calc_score()) # 得出各分数
+    total_score = float(total)  # 总成绩（浮点数）
+    score_item = pattern2.format('SCORE: ' + score)
+    tail_item = pattern2.format('TAIL LENGTH: '+tail_len)
+    total_item = pattern2.format('TOTAL SCORE: '+total)
+    score_text = score_item+'\n'+tail_item+'\n'+total_item
+    self.msg_area.addstr(0, 0, result_text)
+    self.msg_area.addstr(1, 0, score_text)
+    self.msg_area.addstr(
+        5, 0, 'Type: \n(R) to Replay the Game\n(B) to Return to Menu')
+    self.tui.refresh()
+    self.msg_area.refresh()
+    ```
+
+* 调用```res_ins.set_ranking```将总分```total_score```计入排名
+
+* 然后就是我的老办法了，用一个循环来等待用户输入：  
+
+    ```python
+    self.msg_area.nodelay(False)  # 阻塞接受getch
+    while True:
+        recv = self.msg_area.getch() # 获得用户输入
+        if recv in (ord('r'), ord('R')):  # 按下R/r键
+            choice = 'restart' # 操作是重启一局游戏
+            break
+        elif recv in (ord('b'), ord('B')):  # 按下B/b键
+            choice = 'menu' # 操作是回到菜单
+            break
+    ```
+
+* 用户按下指定按键后会跳出循环，接着程序调用```del_area()```删除游戏区域：
+
+    ```python
+    @classmethod
+    def __del_area(cls):
+        del cls.game_area, cls.msg_area
+    ```
+
+* 紧接着**撤销**```curses```窗口初始化：```curses.endwin()```  
+
+## 处理游戏结束后用户的选项
+
+* 最后我们把用户最后选择的选项值```choice```传出去，怎么传出去呢？其实把```choice```动态添加到```game```实例的属性里就行了：  
+
+    ```python
+    self.end_choice = choice  # 传值出去
+    ```
+
+至此，```game.over()```方法执行完毕，```game.over()```方法是```game.start()```方法最后一个调用，所以这也意味着```game.start()```执行完毕。  
+
+回到```view.py```模块里异步函数```asyncio_game```，自从```await asyncio.wait(task_list)```后一直其一直被挂起。现在```task_list```中最后一个任务```game.start()```执行完毕了，```asyncio_game```继续执行下面的代码：  
+
+```python
+async def asyncio_game(self):  
+    task_list = set()
+    game = Game(task_list)  
+    task_list.add(asyncio.create_task(game.start()))
+    await asyncio.wait(task_list)
+    print('Concurrent tasks were completed.') # 从这里开始继续执行
+    self.game_end_choice = game.end_choice
+```
+
+因为我们刚刚把```choice```加到```game```对象上作为属性```end_choice```传出来了，我们把```end_choice```再次取出来，作为```menu```对象的属性```game_end_choice```：
+
+```python
+self.game_end_choice = game.end_choice  # 把游戏结束后的值传出去
+```
+
+这个时候```asyncio_game()```也就执行完毕了。回到```start_game()```，自从**开启事件循环**后```start_game()```的执行一直被阻塞，直至**事件循环停止**。现在```asyncio_game()```执行结束，事件循环停止，于是```start_game()```接着执行接下来的代码：  
+
+```python
+def start_game(self):  
+    asyncio.run(self.asyncio_game())  
+    choice_dict = { # 从这里开始继续执行
+        'restart': self.start_game,
+        'menu': self.menu
+    }
+    choice_dict[self.game_end_choice]()  
+```
+
+根据```game_end_choice```，调用不同的方法来**重开游戏**或者**回到菜单**。  
+
+之所以要传这么多层出来，是为了**让当前的```asyncio```事件循环停止**，这样才能重开事件循环进行新一轮的游戏。
+
+至此就是整个游戏的运行过程...哇，我都不敢说自己讲清楚了，待我喝口水再写下一节...
+
+![exhausted-2021-12-22](https://cdn.jsdelivr.net/gh/cat-note/bottleassets@latest/img/exhausted-2021-12-22.jpg)  
+
+
+
