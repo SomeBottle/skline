@@ -2,7 +2,7 @@
 
 ![cj9xz5y3a01lbxz5nbd24hkio.1200-2021-12-04](https://cdn.jsdelivr.net/gh/cat-note/bottleassets@latest/img/cj9xz5y3a01lbxz5nbd24hkio.1200-2021-12-04.jpg)
 
-## Curses  
+## curses  
 
 Python标准库，官方文档：
 
@@ -13,9 +13,9 @@ Curses最开始是由C进行编写，用作终端图形界面（TUI）绘制的�
 
 很可惜的是，到目前为止仍然无法支持Windows，我们需要额外安装扩展库↓  
 
-## Windows-Curses  
+## windows-curses  
 
-Curses在Windows平台的补丁包，使得在Windows上能使用Curses库.    
+curses在Windows平台的补丁包，使得在Windows上能使用Curses库.    
 
 Pypi页面： https://pypi.org/project/windows-curses/
 
