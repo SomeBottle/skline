@@ -259,15 +259,66 @@ while True:  # 开始游戏动画
 
 每次循环开头要对**每个**```curses```窗口进行擦除```erase()```操作，等**所有绘制完成**后再调用窗口的```refresh()```方法输出新增的文本，立即更新屏幕。  
 
-除此之外，循环开头还记录了一下本次运算的开始时间戳```tick_start```，在循环尾部根据```tick_take=time.time()-tick_start```运算出**本次运算消耗的时间**，然后在运算间隔，也就是```tick_interval```上减去```tick_take```。为什么要这样做？这就得讲一下```TPS``了：  
-
 -------
+
+除此之外，循环开头还记录了一下本次运算的开始时间戳```tick_start```，在循环尾部根据```tick_take=time.time()-tick_start```运算出**本次运算消耗的时间**，然后在运算间隔，也就是```tick_interval```上减去```tick_take```。为什么要这样做？这就得讲一下```TPS```了：  
 
 ```TPS```全称```Ticks per Second```，也就是每秒运算的次数。在上面的循环运算中，比如我的```TPS=10```，也就是每秒运算```10```次，那么运算一次就要**等待```0.1```秒**再进行下一次循环。
-
--------
 
 但众所周知，程序运算过程中怎么样都是会消耗时间的，也就是说我们本来运算**已经耗费了一部分时间**，到末尾还要等待```0.1```秒。这样下来最终运算间隔是**大于0.1秒**的。  
 
 为了尽可能**抵消运算所耗费时间**，我们需要在等待时间上**减去运算所需时间```tick_take```**。  
+
+-------
+
+接下来看看**一次运算**中程序做了什么：  
+
+* 调用```line_ins```线体实例的```draw_line()```方法绘制线体：
+
+    ```python
+    def draw_line(self):  # 绘制角色
+        head_pos = self.attrs['head_pos'] # 从实例属性中取出头部坐标
+        body_pos = self.attrs['body_pos'] # 从实例属性中取出尾巴坐标
+        head_x, head_y = map(floor, head_pos)  # 解构赋值
+        line_body = Game.styles['line']
+        for t in body_pos:  # 使用3号颜色对绘制尾部
+            Game.printer(t[1], t[0], line_body, Game.color_pair(3))
+        # 使用1号颜色对进行头部绘制
+        Game.printer(head_y, head_x, line_body, Game.color_pair(1))
+    ```
+
+* 调用自身的```draw_border()```方法，根据上面```create_border()```创建的点集合绘制游戏边界  
+
+    ```python
+    def __draw_border(self):  # 根据边界点坐标绘制游戏区域边框
+        pattern = self.styles['area_border']  # 读取边框样式
+        for point in self.border_points:
+            x, y = point
+            self.printer(y, x, pattern, self.color_pair(2)) # 使用2号颜色对绘制边界
+    ```
+
+* 调用自身的```draw_score()```方法，在**消息区域**绘制当前得分：
+
+    ```python
+    def __draw_score(self):
+        line_ins = self.get_ins('line') # 取出线体实例
+        score_text = f'SCORE: {self.__score} ' # 获得游戏分数
+        len_text = f'TAIL LEN: {len(line_ins.attrs["body_pos"])}' # 从线体实例属性取出尾巴长度
+        self.msg_area.addstr(0, 0, score_text+' / '+len_text) # 绘制  
+    ```
+
+* 调用自身的```draw_flow_stones()```方法，在**游戏区域**绘制流石。流石这个点集合是由**另外一个协程**操作的，我们后面再说。  
+
+    ```python
+    def __draw_flow_stones(self):  # 绘制流石
+        if len(self.flow_stones) <= 0:  # 没有流石就不多费力气
+            return False
+        flow_stone = self.styles['flow_stone'] # 获得流石的样式
+        flow_stone_color = self.styles['flow_stone_color'] # 获得流石的颜色
+        self.set_color(22, flow_stone_color)  # 22号颜色对用于流石
+        for pt in self.flow_stones: # 遍历坐标打印每个流石
+            x, y = pt
+            self.printer(y, x, flow_stone, self.color_pair(22))
+    ```
+
 
