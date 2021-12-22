@@ -701,5 +701,9 @@ def start_game(self):
 
 ![exhausted-2021-12-22](https://cdn.jsdelivr.net/gh/cat-note/bottleassets@latest/img/exhausted-2021-12-22.jpg)  
 
+--------
 
+由```pycallgraph```生成的动态调用关系图：  
+
+![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/callgraph-whole.png)  
 
