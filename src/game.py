@@ -275,7 +275,7 @@ class Game:
         self.__create_border()  # 创建边界点坐标
         line_ins = Line()  # 实例化线体
         Game.__reg_ins('line', line_ins)  # 在Game类上注册（保留）实例
-        trg_ins = Trigger()  # 实例化触发点，并和线体实例关联
+        trg_ins = Trigger()  # 实例化触发点
         while True:  # 开始游戏动画
             tick_start = time.time()  # 本次tick开始时间
             self.tui.erase()  # 擦除内容

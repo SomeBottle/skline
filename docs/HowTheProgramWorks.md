@@ -28,6 +28,8 @@ if __name__ == '__main__':  # 不是作为模块调用
 
 ![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/callgraph-menu.png)  
 
+## 进入菜单
+
 调用```menu```函数后首先会初始化一个```current_choice```值，用于记录当前用户选择的```菜单选项```。  
 
 ```python
@@ -82,6 +84,8 @@ self.choice_func[current_choice]()  # 执行选项对应的函数
 
 在```困难度调整```和```排名表```页面用了差不多的处理方式，都是利用了```while```循环。  
 
+## 利用协程机制开始游戏
+
 接下来我们假定```current_choice=0```，也就是用户选择**开始游戏**。根据字典```choice_func```发现调用的是```start_game```这个方法：  
 
 ```python
@@ -130,6 +134,8 @@ async def asyncio_game(self):  # 开启并行任务
     game = Game(task_list)  # 向实例传入任务列表
 ```
 
+```Game```类实例化过程中，首先调用```cls_init```初始化了**类属性**，并重新调用```curses.initscr()```初始化了**TUI**界面（因为之前在```menu```末尾调用了```curses.endwin()```撤销了初始化）。接着在读取配置文件后调用```set_color```这个Hook方法设置了几个颜色对，一系列初始化后得到实例对象```game```。
+
 接着先用```asyncio.create_task```将```game.start()```这个协程**封装**为任务Task（```async```修饰的方法可以被理解成为一个协程），然后将这个任务加入到任务列表里。
 
 ```python
@@ -141,3 +147,127 @@ task_list.add(asyncio.create_task(game.start()))
 ```python
 await asyncio.wait(task_list)
 ```
+
+现在```task_list```里面只有```game.start()```一个协程任务，执行后我们便进入了游戏主程序。  
+
+## 进入游戏主程序
+
+![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/callgraph-game.png)  
+
+------
+
+首先进行的是倒计时，调用```count_down()```函数。倒计时方法内是个```for```循环，读取```ready```,```3```,```2```,```1```等艺术字，然后传递给```flash_fx()```函数来在屏幕上绘制**随机推拉艺术字**的动画（用的是切片）
+
+```python  
+def __count_down(self):  # 游戏开始前的倒计时
+    for i in ('ready', '3', '2', '1'):
+        self.tui.erase()  # 清理残余界面
+        text = Res().art_texts(i)[2]
+        self.__flash_fx(text)  # 做个故障风动画
+        ...
+def __flash_fx(self, content):
+    for i in range(5):
+        self.tui.erase()
+        offset = random.randrange(0, len(content)-1)
+        off_content = content[offset::]+content[:offset:] # 使用切片和随机偏移达成动画效果
+        self.tui.addstr(1, 5, Res.x_offset(off_content, 5))
+        self.tui.refresh()
+        time.sleep(0.1)
+    self.tui.clear() # 清除界面上的内容
+```
+
+每次动画结束后**让艺术字在屏幕中停留一会儿**，其实就是在```count_down```的```for```循环剩下的语句中再打印一遍艺术字：  
+
+```python
+self.tui.addstr(1, 5, Res.x_offset(text, 5))
+self.tui.refresh()  # 刷新窗口，输出addstr的内容
+time.sleep(0.2)  # 主界面
+```
+
+每次执行循环语句块都是如此，达成倒计时效果：  
+
+![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/countdown.gif)  
+
+------
+
+完成倒计时后继续执行```start()```中的语句：  
+
+* ```reset_score()``` 重置```Game```类属性```__score```为0  
+* ```create_area()``` 根据地图大小创建游戏区域和消息区域，并储存到```Game```类属性中，指定游戏区域**非阻塞**，这样能**持续接受用户的操作且不打断循环**:    
+
+    ```python
+    def __create_area(cls):
+        map_w, map_h = map(lambda x: x+3, cls.map_size)  # 获得地图大小
+        # 根据地图大小创建游戏区域，要比地图大小稍微大一点
+        game_area = curses.newwin(map_h, map_w, 1, 1)
+        msg_area = curses.newwin(8, 60, map_h+1, 1)
+        game_area.keypad(True)  # 支持上下左右等特殊按键
+        game_area.nodelay(True)  # 非阻塞，用户没操作游戏要持续进行
+        cls.game_area = game_area
+        cls.msg_area = msg_area
+    ```
+
+* ```create_border()``` 根据地图大小创建**边界点集合**，以便后面绘制：  
+
+    ```python
+    def __create_border(cls):  # 创建边界点坐标
+        map_w, map_h = map(lambda x: x+1, cls.map_size)  # 获得地图大小
+        border_points = set()  # 储存边框的点坐标
+        for w in range(map_w+1):
+            border_points.update({(w, 0), (w, map_h)})
+        for h in range(map_h+1):  # 让竖直方向的边框长一点
+            border_points.update({(0, h), (map_w, h)})
+        cls.border_points = border_points
+    ```
+
+* 将线体类```Line```实例化为对象```line_ins```
+
+* 将上述对象```line_ins```储存到游戏类属性中（后面**触发点实例**能用到）  
+
+* 将触发点类```Trigger```实例化为对象```trg_ins```
+
+接下来就进入**游戏计算**部分了，本质上是个```while```循环。  
+
+## 开始游戏运算  
+
+```python
+while True:  # 开始游戏动画
+    tick_start = time.time()  # 本次tick开始时间
+    self.tui.erase()  # 擦除内容
+    self.msg_area.erase()
+    self.game_area.erase()  # 擦除游戏区域内容
+    line_ins.draw_line()  # 绘制线体
+    self.__draw_border()  # 绘制游戏区域边界
+    self.__draw_score()  # 绘制分数
+    self.__draw_flow_stones()  # 绘制流石
+    line_ins.draw_msg()  # 绘制信息
+    trg_ins.check()
+    trg_ins.draw()
+    self.tui.refresh()
+    self.msg_area.refresh()
+    self.game_area.refresh()
+    line_ins.move()  # 移动线体
+    line_ins.control()  # 接受控制线体
+    if line_ins.impact():  # 判断是否有碰撞
+        break
+    tick_take = time.time()-tick_start  # 本次tick耗时
+    # tick速度：如果0.1秒一计算，TPS=10，这个和图形运动速度有很大关联，0.1s一计算也就是刷新率10Hz
+    # 这里减去了本次tick使用的时间，这样能保证sleep间隔在tick_interval左右
+    if tick_take <= tick_interval:
+        await asyncio.sleep(tick_interval-tick_take)
+```
+
+每次循环开头要对**每个**```curses```窗口进行擦除```erase()```操作，等**所有绘制完成**后再调用窗口的```refresh()```方法输出新增的文本，立即更新屏幕。  
+
+除此之外，循环开头还记录了一下本次运算的开始时间戳```tick_start```，在循环尾部根据```tick_take=time.time()-tick_start```运算出**本次运算消耗的时间**，然后在运算间隔，也就是```tick_interval```上减去```tick_take```。为什么要这样做？这就得讲一下```TPS``了：  
+
+-------
+
+```TPS```全称```Ticks per Second```，也就是每秒运算的次数。在上面的循环运算中，比如我的```TPS=10```，也就是每秒运算```10```次，那么运算一次就要**等待```0.1```秒**再进行下一次循环。
+
+-------
+
+但众所周知，程序运算过程中怎么样都是会消耗时间的，也就是说我们本来运算**已经耗费了一部分时间**，到末尾还要等待```0.1```秒。这样下来最终运算间隔是**大于0.1秒**的。  
+
+为了尽可能**抵消运算所耗费时间**，我们需要在等待时间上**减去运算所需时间```tick_take```**。  
+
