@@ -511,10 +511,10 @@ class Trigger:  # 触发点类
         usable_points = Game.map_points - exist_points
         # 如果不要靠近边界
         if border_offset:
-            offset = 3
+            offset = 3 # 向内缩三格
             map_w, map_h = Game.map_size
-            ava_area = {(xi, yi) for xi in range(offset, map_w-offset-1)
-                        for yi in range(3, map_h-offset-1)}
+            ava_area = {(xi, yi) for xi in range(offset+1, map_w-offset+1)
+                        for yi in range(offset+1, map_h-offset+1)}
             # 利用交集得出可用的点
             usable_points = usable_points & ava_area
         return tuple(usable_points)  # 因为random.choice选不了set

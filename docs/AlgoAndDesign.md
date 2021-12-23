@@ -617,4 +617,48 @@ def list_maker(self, chunk, start=0):
 
     ```h_y-p_y```的判断和上述如出一辙。  
 
-    当线体和触发点在```x```和```y```方向上都满足碰撞条件时，代表**线体碰到触发点了**，```hit()```返回```True```，交给触发点类```Trigger```的实例方法继续处理下面的效果（这点在前面 **游戏是怎么跑起来的** 这一节已经讲过了）
+    当线体和触发点在```x```和```y```方向上都满足碰撞条件时，代表**线体碰到触发点了**，```hit()```返回```True```，交给触发点类```Trigger```的实例方法继续处理下面的效果（这点在前面 **游戏是怎么跑起来的** 这一节已经讲过了）  
+
+* **触发点生成的可用点**  
+
+    在触发点```Trigger```类中有一个实例方法```ava_points()```，用来得到触发点可以生成的**可用点**的集合（也被效果类```FxTlpt```的实例方法用于生成**随机传送点**）。  
+
+    ```python
+    def ava_points(self, border_offset=False):  # 获得可用的点
+        attrs = self.__line.attrs  # 获得线体属性
+        exist_points = set(attrs['body_pos'])  # 脱离原来的引用，转换为集合
+        exist_points.add(attrs['head_pos'])
+        # 获得所有触发点占用的坐标点集合
+        exist_triggers = {i['pos'] for i in self.triggers.values()}
+        exist_points.update(exist_triggers)  # exist_points储存的是已经使用的坐标点
+        exist_points.update(Game.border_points)  # 还要算入边框的点
+        # 将所有的坐标点和已经使用的坐标点作差集，就是还可以选用的坐标点
+        usable_points = Game.map_points - exist_points
+        # 如果不要靠近边界
+        if border_offset:
+            offset = 3
+            map_w, map_h = Game.map_size
+            ava_area = {(xi, yi) for xi in range(offset, map_w-offset-1)
+                        for yi in range(3, map_h-offset-1)}
+            # 利用交集得出可用的点
+            usable_points = usable_points & ava_area
+        return tuple(usable_points)  # 因为random.choice选不了set
+    ```
+
+    这个方法做的事情其实也很好理解：  
+    
+    * 先从线体实例中取出线体属性的**尾巴坐标列表**，转换为集合作为```exist_points```，同时将**线体的头部坐标**加入该集合
+
+    * 接下来是一个**集合推导式**，遍历所有**现存触发点的坐标**并储存于一个集合```exist_triggers```  
+
+    * 把```exist_triggers```内的坐标点全部加入```exists_points```，接着把之前生成的边界点```Game.border_points```也加入```exists_points```  
+
+    * 很好！现在一个包含**所有已经使用的点**的集合```exists_points```就完成了，接下来用地图中所有的点```Game.map_points```与```exists_points```作差集就能得到所有可以用的点了！  
+
+    * 如果```border_offset=True```，代表**可用点**要离边框远一点（和上面**线体初始化**要离边框远一点是一个原理），则让生成点区域每边往内缩```3```格：  
+    利用**集合推导式**生成一个缩进后的可用区域```ava_area```，  
+    然后拿```ava_area```和已经生成的可用点```usable_points```作交集，得到处理后的可用点。
+
+    最后该方法返回的是一个元组，因为这个方法是搭配```random.choice```使用的，```random.choice```只支持有顺序的序列。  
+
+    
