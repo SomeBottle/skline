@@ -259,7 +259,7 @@ def list_maker(self, chunk, start=0):
 
     * **```Game.explode_points```**
 
-        **临时储存**爆炸时**代表爆炸范围**的点集合，由效果类```FxBomb```的```apply()```方法控制，用于和**线体**产生交互。  
+        **临时储存**爆炸，**代表爆炸时的爆炸范围**的点集合，由效果类```FxBomb```的```apply()```方法控制，用于和**线体**产生交互。  
 
     * **```Game.__sight_points```**  
 
@@ -374,7 +374,9 @@ def list_maker(self, chunk, start=0):
 
     每tick(每次运算)都会往头部坐标上添加**每tick对应的位移**，但是**tick**间隔的时间是很短的（假如```TPS=10```，tick(运算)间隔就是```0.1```秒），如果每**tick**都加的是整数，那**线体**未免跑得太快了！这也是为什么```vx```与```vy```是大于```0```小于等于```1```的浮点数。  
 
-    这点光说可能不太能讲清楚，通过一张表能大概表示这个意思，拿```水平方向x坐标```举例：  
+    这点光说可能不太能讲清楚，通过一张表能大概表示这个意思，
+    
+    **下面的部分拿```水平方向x坐标```举例：**   
 
     （假如速度是```0.1格/tick```）
 
@@ -418,8 +420,58 @@ def list_maker(self, chunk, start=0):
 
     上面讲的都是**头部的运动**，接下来讲讲**尾巴**！  
 
-    
+    尾巴要做的事其实挺简单，就是跟着**头部**运动。我将尾巴**按每一节的坐标**```(x,y)```放在一个列表中。  
 
+    为了使操作的步骤最少，我设计把**离头部最近的一节**放在**列表末尾**，**离头部最远的一节**放在**列表头部**，为什么这么做呢？下面来看看代码  
+
+    ![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/tail_list_fixed.png)  
+
+    ```python
+    def move(self):  # 计算角色移动
+        max_x, max_y = self.__map_w, self.__map_h  # 解构赋值最大的x,y坐标值
+        attrs = self.attrs  # 获得角色（线体）属性
+        head_pos = attrs['head_pos']
+        x, y = head_pos  # 解构赋值头部x,y坐标
+        prev_x, prev_y = floor(x), floor(y)  # 上一tick的头部坐标
+        vx, vy = attrs['velo']  # 解构赋值x,y速度
+        dx, dy = attrs['direction']  # 解构赋值x,y的方向
+        # 让线头能穿越屏幕，因为窗口绘制偏差，x和y的初始值从1开始，与之相对max_x,max_y也添加了偏移量1
+        x = x + (vx*dx) if x >= 1 and x < max_x + \
+            1 else (max_x if dx < 0 else 1)
+        y = y + (vy*dy) if y >= 1 and y < max_y + \
+            1 else (max_y if dy < 0 else 1)
+        new_head_pos = (x, y)
+        attrs['head_pos'] = new_head_pos  # 更新头部坐标
+        # 向下取整后线身前进了一格
+        body_pos = attrs['body_pos']  # 获得尾巴列表
+        body_len = len(body_pos) # 获得尾巴长度
+        if not (floor(x) == prev_x and floor(y) == prev_y):
+            Game.update_myopia_sight()  # 在蛇体移动一格的情况下更新近视情况下的区域
+            if body_len > 0:  # 身体长度大于0再进行处理
+                body_pos = body_pos[1::]
+                body_pos.append((prev_x, prev_y))
+                attrs['body_pos'] = body_pos
+    ```
+
+    * 首先先获取**本次运算对头部坐标进行处理前（也就是上一个tick）** 的头部坐标```prev_x```和```prev_y```，注意这里进行了**向下取整**，和游戏显示是一样的处理！
+
+    * 获取尾部坐标列表```attrs['body_pos]```备用
+    
+    * 待**本次运算（这一个tick）对头部坐标进行处理后**，拿到**当前的头部坐标**```x```和```y```，然后对其进行**向下取整**  
+
+    * 将向下取整后的```x```和```y```与```prev_x```和```prev_y```进行**分别**对比，如果**任意一组**不相等，说明**头部在屏幕上显示的位置改变了！**  
+
+    * 头部在屏幕上显示的位置改变后就应该**让尾巴跟进**了（不过前提也是```body_len>0```，要先有尾巴）  
+
+    * 我利用列表的切片方法，把**离头部最远的坐标去除**（切片从下标1开始取）。然后把```(prev_x,prev_y)```，也就是头部**之前在屏幕上显示的坐标**，```append```到列表```body_pos```的尾部，然后更新原来的列表```attrs['body_pos']```，尾巴跟随就完成了！  
+
+    形象地用动图展示这个过程：
+
+    ![](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/tail-movement.gif) 
+
+    其中我使用了列表的```append```方法，把新的对象直接加到**列表末尾**，这个操作的时间复杂度是```O(1)```，也就是立刻完成，非常高效。这也是为什么我要把**离头部最远的一节**放在**列表头部**！  
+
+    至此线体的运动算法咱就写完了~ 
 
 * **线体初始化**
 
