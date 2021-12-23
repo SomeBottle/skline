@@ -510,6 +510,83 @@ def list_maker(self, chunk, start=0):
 
     最后用```random.choice```从```ava_points```里随机选择一个**可用点**，附到线体属性里作为线体头部初始位置。  
 
-* **线体的碰撞**
+* **线体的致命碰撞**
 
+    在```Line```类的实例方法里专门有一个```impact()```来判断**线体头部**是否**受到致命碰撞**，在游戏主循环里每次```tick```(运算)都会**调用一次**：  
+
+    ```python
+    def impact(self):  # 碰撞判断
+        attrs = self.attrs
+        if attrs['invincibility']:  # 如果无敌就直接跳过
+            return False
+        max_x, max_y = self.__map_w, self.__map_h  # 解构赋值最大的x,y坐标值
+        x, y = attrs['head_pos']
+        result = False  # False代表未碰撞，True代表有碰撞
+        judge_border_x = x >= 1 and x < max_x+1
+        judge_border_y = y >= 1 and y < max_y+1
+        floored = (floor(x), floor(y))
+        # 第一步先判断是否碰到边框
+        if not (judge_border_x and judge_border_y):
+            result = True
+        # 第二步判断是不是碰到自己了
+        elif floored in attrs['body_pos']:
+            result = True
+        # 第三步判断是不是被炸到了
+        elif floored in Game.explode_points:
+            result = True
+        # 第四步判断是不是被流石撞到了
+        elif floored in Game.flow_stones:
+            result = True
+        return result
+    ```
+
+    在```impact()```函数的开头有个**无敌模式(Invincibility)**的判断，如果无敌就直接返回```False```，代表忽略一切致命撞击。  
+
+    **碰撞**这件事是反映在**游戏界面**上，被用户所看到的。所以我们判断也要按**游戏界面的处理方式**——对**头部坐标向下取整**，得到一个点坐标```(floor(x), floor(y))```
+
+    除开无敌模式，撞击判定我分为了四部分：  
+
+    * **撞到墙壁**：
+
+        处理这一部分我写了两个逻辑表达式进行判断：  
+
+        ```python
+        judge_border_x = x >= 1 and x < max_x+1
+        judge_border_y = y >= 1 and y < max_y+1
+        ```
+
+        原理其实和上面**线体移动**一节的穿墙判断是一致的，这里就不多赘述。  
+
+        当```judge_border_x```和```judge_border_y```的其中一个逻辑值不为真，就代表碰到墙壁了！  
+
+    * **撞到自己尾巴**，**被炸弹炸到**，**被流石砸到**
+
+        这三个判断的方式都是非常类似的，都是点判断，运用了```in```运算符：
+
+        ```python
+        elif floored in attrs['body_pos']:
+            result = True
+        # 第三步判断是不是被炸到了
+        elif floored in Game.explode_points:
+            result = True
+        # 第四步判断是不是被流石撞到了
+        elif floored in Game.flow_stones:
+            result = True
+        ```
+
+        原理很简单，```attrs['body_pos']```，```Game.explode_points```，```Game.flow_stones```都是```set```集合类型，我们只需要判断**取整后头部坐标元组**```floored```**是否存在于这些点集合中**就可以了。  
+
+        如果```floored```存在于这些点集合中，说明**碰撞到了这些点**。  
+
+        值得一提的是，我对几乎所有点集都采用```set```集合类型，是因为对于```in```运算符来说检索一个对象是否在集合中的**时间复杂度**是```O(1)```至```O(n)```（其中```O(n)```是非常不常见的），是**非常高效**的。  
+
+    当判断**线体头部受到致命撞击**后，```impact()```方法会返回```True```：  
+
+    ```python
+    # 在游戏主循环中
+    if line_ins.impact():  # 判断是否有碰撞
+        break # 跳出循环
+    ```
+
+    由此跳出循环，**让游戏结束**。  
 
