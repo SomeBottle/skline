@@ -269,6 +269,8 @@ def list_maker(self, chunk, start=0):
 
         储存地图中的**流石**点集合，代表地图中**流石**的位置，由效果类```FxStones```的```apply()```方法控制，用于和**线体**产生交互。  
 
+    -----
+
 * **线体移动**
 
     线体移动靠的是每次**游戏主循环**调用```Line```类实例的```move()```方法来实现。对于线体运动方向的控制我采用了两个元组：  
@@ -471,7 +473,9 @@ def list_maker(self, chunk, start=0):
 
     其中我使用了列表的```append```方法，把新的对象直接加到**列表末尾**，这个操作的时间复杂度是```O(1)```，也就是立刻完成，非常高效。这也是为什么我要把**离头部最远的一节**放在**列表头部**！  
 
-    至此线体的运动算法咱就写完了~ 
+    至此线体的运动算法咱就写完了~   
+
+    ------
 
 * **线体初始化**
 
@@ -509,6 +513,8 @@ def list_maker(self, chunk, start=0):
     ```ava_points```推导式里我把**可用点的范围往内缩进了3格**：从```(1,map_w+1)```改成```(4,map_w-2)```，这样防止最开始**头部生成在边缘**，开局即游戏结束肯定是不行的啦！  
 
     最后用```random.choice```从```ava_points```里随机选择一个**可用点**，附到线体属性里作为线体头部初始位置。  
+
+    ------
 
 * **线体的致命碰撞**
 
@@ -590,6 +596,8 @@ def list_maker(self, chunk, start=0):
 
     由此跳出循环，**让游戏结束**。  
 
+    --------
+
 * **线体和触发点的碰撞**  
 
     线体```Line```类中还有个很简单的实例方法```hit(p_x,p_y)```，接受一个坐标来判断是否和线体**发生碰撞**：  
@@ -618,6 +626,8 @@ def list_maker(self, chunk, start=0):
     ```h_y-p_y```的判断和上述如出一辙。  
 
     当线体和触发点在```x```和```y```方向上都满足碰撞条件时，代表**线体碰到触发点了**，```hit()```返回```True```，交给触发点类```Trigger```的实例方法继续处理下面的效果（这点在前面 **游戏是怎么跑起来的** 这一节已经讲过了）  
+    
+    ------
 
 * **触发点生成的可用点**  
 
@@ -661,4 +671,174 @@ def list_maker(self, chunk, start=0):
 
     最后该方法返回的是一个元组，因为这个方法是搭配```random.choice```使用的，```random.choice```只支持有顺序的序列。  
 
+    -----
+
+* **近视Myopia效果的处理**  
+
+    本游戏中有个**myopia近视效果**挺有趣的，其实现方法其实是基于```Game.printer```这个Hook的。  
+
+    ```Game```类属性初始化时有一个```short_sighted```属性，用来指示**是否近视**。  
+
+    当**线体碰到myopia触发点后**，```Trigger```类实例方法会间接调用```FxMyopia```效果类的方法```apply```，从而启动近视效果。  
+
+    该方法中有两条语句值得注意：  
+
+    ```python
+    Game.update_myopia_sight() # 更新视野区域
+    Game.myopia(True) # 启用近视效果  
+    ```
+
+    * ```Game.update_myopia_sight()```方法用于更新视野区域：  
+
+        **一个前提**：近视视野是以**线体头部**为中心而展开的。
+
+        ```python
+        @classmethod
+        def update_myopia_sight(cls):  # 生成近视区域，搭配Line.move方法
+            if cls.short_sighted:
+                x, y, sight_w, sight_h = cls.__get_sight_info()
+                l_t_x = x - (sight_w-1)//2
+                l_t_y = y - (sight_h-1)//2
+                # 得到视野区所有坐标点
+                sight_points = {(xi, yi) for yi in range(l_t_y, l_t_y+sight_h)
+                                for xi in range(l_t_x, l_t_x+sight_w)}
+                cls.__sight_points.clear()
+                cls.__sight_points.update(sight_points)
+        ```
+
+        这个方法首先通过```__get_sight_info()```获取**向下取整的头部坐标和近视视野宽高**```(x,y,sight_w,sight_h)```,  
+
+        接着根据**视野宽高**和**头部坐标**找出视野区域点集合:  
+
+        ![示例图](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/sight-points-fixed.png)   
+
+        这个地方比较难讲清楚，首先```l_t_x```和```l_t_y```是为了找出**相对头部左上角相应位移的点**，让这个点相对头部的**x**和**y**方向上的偏差分别为视野宽高```sight_w```和```sight_h```的一半  
+
+        至于为什么算的时候要写```sight_w-1```和```sight_h-1```，其实这个```-1```写不写都是无所谓的，这是**并不影响**最终生成的视野点区域大小的。  
+
+        接下来又是一个**集合推导式**，让```x```坐标从```l_t_x```到```l_t_x-1```，让```y```坐标从```l_t_y```到```l_t_y-1```，得出```sight_w × sight_h```个视野点的集合```sight_points```，代表**头部近视时能看到的区域**。  
+
+        最后这个方法会将视野点```sight_points```更新到```Game```类属性中。 
+
+        ------
+
+        ```Game.update_myopia_sight()```在整个游戏程序中只被调用了两次，一次是```FxMyopia```里**刚刚应用效果**的时候，相当于初始化。  
+
+        另一次则又回到我们的老朋友：```Line```类的实例方法```move()```里，当**屏幕中头部移动一格时**，会调用其更新近视视野：  
+
+        ```python
+        # Line.move里
+        if not (floor(x) == prev_x and floor(y) == prev_y):
+            Game.update_myopia_sight()  # 在蛇体移动一格的情况下更新近视情况下的区域
+        ```
+
+        为什么这样做呢？在这一节的开头我已经说过近视视野是以**线体头部**为中心而展开的，所以当**头部在屏幕显示中没有动的时候**，视野范围是没有改变的，所以**只需要在头部移动一格**的时候更新一次视野范围就可以了。  
+
+    * ```Game.myopia(True)```方法用于启用近视效果  
+
+        ```python
+        @classmethod
+        def myopia(cls, toggle):  # 是否近视
+            cls.short_sighted = toggle
+        ```
+
+        调用这个方法其实就是在修改```Game.short_sighted```这个类属性，当类属性为真即**启动近视效果**。  
+
+    -------
+
+    启动了近视效果之后，接下来咱说一下**近视效果的实现**：  
+
+    近视效果的实现得益于```Game.printer()```这个Hook，这个类方法接管了```curses```**游戏区域的绘制**，在**没有近视**的时候相当于```Game.game_area.addstr()```。  
+
+    * **一个前提：**```Game.printer()```每次只**打印一个坐标对应的点**到屏幕上，用户看到的画面是遍历**点集合**时调用```Game.printer()```打印出来的。  
+
+    当**启用近视**之后，```Game.printer()```就会进行额外的处理：  
+
+    ```python
+    ...
+    sight_points = cls.__sight_points
+    if (pos_x, pos_y) in sight_points:  # 如果要打印的内容在视野区
+        x, y, sight_w, sight_h = cls.__get_sight_info()
+        map_w, map_h = cls.map_size  # 获得地图尺寸
+        x_ratio = map_w//sight_w  # x方向比例
+        y_ratio = map_h//sight_h  # y方向比例
+        x_center = map_w//2  # 地图中x方向中心
+        y_center = map_h//2  # 地图中y方向中心
+        relative_x = pos_x-x  # x方向上相对头部距离
+        relative_y = pos_y-y  # y方向上相对头部距离
+        c_t_x = x_center+relative_x*x_ratio  # 找出在放大视野中的中心x坐标
+        c_t_y = y_center+relative_y*y_ratio  # 找出在放大视野中的中心y坐标
+        # 接下来要放大这一个点
+        half_w = floor((x_ratio-1)/2)  # 先找出一半宽度，向上取整
+        half_h = floor((y_ratio-1)/2)  # 找出一半高度
+        new_l_t_x = c_t_x-half_w  # 这一个方块的左上角x坐标
+        new_l_t_y = c_t_y-half_h  # 这一个方块的左上角y坐标
+        # 获得渲染这个方块的点坐标
+        block_points = {(bx, by) for by in range(
+            new_l_t_y, new_l_t_y+y_ratio) for bx in range(new_l_t_x, new_l_t_x+x_ratio)}
+        for pt in cls.cut_points(block_points):  # 去掉地图外面的点，防止出错
+            bx, by = pt
+            win_obj.addstr(by, bx, string, *args)
+    ```
+
+    这一部分要做的事我也一一列出：  
+
+    * 首先判断**待打印点**```(pos_x,pos_y)```是否存在视野范围```sight_points```内，如果存在于```sight_points```内就继续处理  
+
+    * 一样是先通过```__get_sight_info()```获取**向下取整的头部坐标和近视视野宽高**```(x,y,sight_w,sight_h)```
+
+    * 先算出```x_ratio```,```y_ratio```，代表```x```和```y```方向上视野缩小前后的长宽**比例**，用于后面放大处理  
+
+    * 接着得找出**游戏区域**的中心坐标```x_center```和```y_center```，因为**在近视视野中**，线体头部是**一直处在画面中央作为中心的**
+
+    * 找**待打印点**```(pos_x,pos_y)```和头部点（同时也是中心点）```(x,y)```相减得到的相对距离```relative_x```和```relative_y```
+
+    * 把相对距离**分别乘以比例**```x_ratio```和```y_ratio```后得到**放大后的相对距离**```relative_x*x_ratio```和```relative_y*y_ratio```  
+
+    * 用游戏区域的中心坐标```x_center```和```y_center```加上**放大后的相对距离**，就是在视野放大后```(pos_x,pos_y)```这个点的**中心坐标**```(c_t_x,c_t_y)```  
+
+    * 接下来我们要将这个点**进行放大**。  
+    原本画面中**一个点**的长宽是```1×1```，那么```x```和```y```方向各放大```x_ratio```和```y_ratio```倍后，放大的点的长宽就是```x_ratio × y_ratio```  
+    和上面```update_myopia_sight()```的处理一致，我们也得到放大的点的一半长宽```half_w```和```half_h```   
+
+        ```python
+        half_w = floor((x_ratio-1)/2)  # 先找出一半宽度，向下取整
+        half_h = floor((y_ratio-1)/2)  # 找出一半高度
+        ```
+
+    * 紧接着**基于这个点的中心坐标**，得到放大的点的**左上角**的坐标，  
+    点放大后变成**方块**
+
+        ```python
+        new_l_t_x = c_t_x-half_w  # 这一个方块的左上角x坐标
+        new_l_t_y = c_t_y-half_h  # 这一个方块的左上角y坐标
+        ```
     
+    * 最精彩的来了，我们根据这个放大后方块的左上角坐标，通过**集合推导式**生成**用于绘制放大后的方块的点集合**，  
+    从左上角```(new_l_t_x,new_l_t_y)```到右下角```(new_l_t_x+x_ratio,new_l_t_y+y_ratio)```：  
+
+        ```python
+        block_points = {(bx, by) for by in range(new_l_t_y, new_l_t_y+y_ratio) for bx in range(new_l_t_x, new_l_t_x+x_ratio)}
+        ```
+
+    * 最后，将**用于绘制放大后的方块**的点集合利用```Game.cutpoints()```进行修剪，本质是和```Game.map_points```做了一个交集，为的是**不绘制超出游戏显示区域的点**。  
+
+    * 修剪完毕后，遍历点集合，将其打印到屏幕上。
+
+    下面两张动图会**演示一遍这个过程**（因为动画太长了，拆成两张图）：  
+
+    ![示例图1](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/how-myopia-works-1.gif)   
+
+    ![示例图2](https://cdn.jsdelivr.net/gh/SomeBottle/skline@main/docs/pics/how-myopia-works-2.gif)   
+
+    ------
+
+至此，我觉得比较重要的算法和设计就写完了。  
+
+其实还有很多没写到的点，像```FxStones```流石效果类中通过调整```TPS```来控制流石速度等等...我在源码中已经做了一定的注释，应该是不难理解的~  
+
+那么就是这样！接下来进入课设总结部分~ 
+
+
+
+

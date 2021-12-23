@@ -164,7 +164,7 @@ class Game:
                 c_t_x = x_center+relative_x*x_ratio  # 找出在放大视野中的中心x坐标
                 c_t_y = y_center+relative_y*y_ratio  # 找出在放大视野中的中心y坐标
                 # 接下来要放大这一个点
-                half_w = floor((x_ratio-1)/2)  # 先找出一半宽度，向上取整
+                half_w = floor((x_ratio-1)/2)  # 先找出一半宽度，向下取整
                 half_h = floor((y_ratio-1)/2)  # 找出一半高度
                 new_l_t_x = c_t_x-half_w  # 这一个方块的左上角x坐标
                 new_l_t_y = c_t_y-half_h  # 这一个方块的左上角y坐标
@@ -321,8 +321,7 @@ class Line:  # 初始化运动线
             # 运动方向(x,y)，-1代表负向。向右为X轴正方向，向下为Y轴正方向
             'direction': (random.choice((1, -1)), random.choice((1, -1))),
             'body_pos': [],  # 身体各节的位置
-            'invincibility': False,  # 是否无敌
-            'myopia': False  # 是否近视
+            'invincibility': False  # 是否无敌
         }
         self.effects = {}  # 线身效果
         self.fx_dict = {  # 效果提示对照表
@@ -511,7 +510,7 @@ class Trigger:  # 触发点类
         usable_points = Game.map_points - exist_points
         # 如果不要靠近边界
         if border_offset:
-            offset = 3 # 向内缩三格
+            offset = 3  # 向内缩三格
             map_w, map_h = Game.map_size
             ava_area = {(xi, yi) for xi in range(offset+1, map_w-offset+1)
                         for yi in range(offset+1, map_h-offset+1)}
