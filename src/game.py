@@ -310,9 +310,9 @@ class Line:  # 初始化运动线
     def __init__(self) -> None:
         self.__map_w, self.__map_h = Game.map_size  # 解构赋值地图长宽
         # 注意，防止生成在边缘，不然开局就G了！
-        # 把生成区域x,y从地图区域往内各缩4格，防止生成在边缘
-        ava_points = [(xi, yi) for xi in range(4, self.__map_w-3)
-                      for yi in range(4, self.__map_h-3)]
+        # 把生成区域x,y从地图区域往内各缩3格，防止生成在边缘
+        ava_points = [(xi, yi) for xi in range(4, self.__map_w-2)
+                      for yi in range(4, self.__map_h-2)]
         init_velo = Game.game_cfg['init_velo']  # 配置的初始速度
         self.attrs = {  # 线体属性
             'head_pos': random.choice(ava_points),  # 生成随机的头部坐标

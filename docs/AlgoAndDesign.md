@@ -475,5 +475,41 @@ def list_maker(self, chunk, start=0):
 
 * **线体初始化**
 
-    线体初始化主要做的事是```随机生成了初始线体的行进速度方向```
+    线体初始化主要做的事是随机生成了线体的```初始行进速度方向```和```初始位置```。  
+
+    ```python
+    def __init__(self) -> None:
+        self.__map_w, self.__map_h = Game.map_size  # 解构赋值地图长宽
+        # 注意，防止生成在边缘，不然开局就G了！
+        # 把生成区域x,y从地图区域往内各缩3格，防止生成在边缘
+        ava_points = [(xi, yi) for xi in range(4, self.__map_w-2)
+                      for yi in range(4, self.__map_h-2)]
+        init_velo = Game.game_cfg['init_velo']  # 从配置中取出初始速度
+        self.attrs = {  # 线体属性
+            'head_pos': random.choice(ava_points),  # 生成随机的头部坐标
+            # 头部的运动速度(Vx,Vy)，单位：格数/tick，最开始要不沿x轴，要不沿y轴运动
+            'velo': random.choice(((init_velo, 0), (0, init_velo))),
+            # 运动方向(x,y)，-1代表负向。向右为X轴正方向，向下为Y轴正方向
+            'direction': (random.choice((1, -1)), random.choice((1, -1))),
+            'body_pos': [],  # 身体各节的位置
+            'invincibility': False,  # 是否无敌
+            'myopia': False  # 是否近视
+        }
+        ...
+    ```
+
+    从代码可以看出来，初始速度和方向直接用的```random.choice```方法从元组里选。
+    
+    初始速度要不沿水平方向```(v,0)```，要不沿竖直方向```(0,v)```；而方向则要不沿当前方向的正方向```1```，要不沿着反方向```-1```。  
+
+    值得一说的是可用点集合```ava_points```，用于抽取**初始头部位置**。  
+
+    同样是用推导式，不过这里用的是**列表推导式**，因为```random.choice```是针对**列表或元组**进行选择的。其实也可以写成集合推导式，只不过需要用到另一个方法```random.sample```了，这个方法的**效率相较比较低**，就不考虑了。  
+
+    ```ava_points```推导式里我把**可用点的范围往内缩进了3格**：从```(1,map_w+1)```改成```(4,map_w-2)```，这样防止最开始**头部生成在边缘**，开局即游戏结束肯定是不行的啦！  
+
+    最后用```random.choice```从```ava_points```里随机选择一个**可用点**，附到线体属性里作为线体头部初始位置。  
+
+* **线体的碰撞**
+
 
