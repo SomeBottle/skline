@@ -291,7 +291,7 @@ TUI游戏，一条像贪吃蛇的线。
 
 ## 课设说明  
 
-1. [课程设计概述](https://github.com/SomeBottle/skline/blob/main/docs/AboutTheCourseProject.md)  
+1. [课程设计概述](docs/AboutTheCourseProject.md)  
 
 2. [需求分析](https://github.com/SomeBottle/skline/blob/main/docs/RequirementsAnalysis.md)  
 
