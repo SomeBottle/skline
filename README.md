@@ -293,15 +293,15 @@ TUI游戏，一条像贪吃蛇的线。
 
 1. [课程设计概述](docs/AboutTheCourseProject.md)  
 
-2. [需求分析](https://github.com/SomeBottle/skline/blob/main/docs/RequirementsAnalysis.md)  
+2. [需求分析](docs/RequirementsAnalysis.md)  
 
-3. [使用的标准库和扩展库](https://github.com/SomeBottle/skline/blob/main/docs/Libraries.md)  
+3. [使用的标准库和扩展库](docs/Libraries.md)  
 
-4. [模块/类/函数小展示](https://github.com/SomeBottle/skline/blob/main/docs/ModulesClassesFuncs.md)  
+4. [模块/类/函数小展示](docs/ModulesClassesFuncs.md)  
 
-5. [游戏是怎么跑起来的](https://github.com/SomeBottle/skline/blob/main/docs/HowTheProgramWorks.md)  
+5. [游戏是怎么跑起来的](docs/HowTheProgramWorks.md)  
 
-6. [算法&设计](https://github.com/SomeBottle/skline/blob/main/docs/AlgoAndDesign.md)  
+6. [算法&设计](docs/AlgoAndDesign.md)  
 
 ## 为什么界面是英文
 
