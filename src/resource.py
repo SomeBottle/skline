@@ -8,7 +8,7 @@ import json
 
 class Res:
     def __init__(self) -> None:
-        self.f_path = path.dirname(__file__)  # 当前程序运行所在的绝对目录
+        self.f_path = path.dirname(path.abspath(__file__))  # 当前程序运行所在的绝对目录
         config_path = self.f_path+'/config.json'
         ranking_path = self.f_path+'/ranking.json'
         default_config = {  # 默认配置文件
